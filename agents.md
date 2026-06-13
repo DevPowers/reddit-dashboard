@@ -137,3 +137,11 @@ Upon completing the setup, the agent must generate a `README.md` containing:
 2. Commands to install dependencies (`pnpm install`).
 3. Commands to push the Drizzle schema (`pnpm run db:push`).
 4. Commands to run the dev server (`pnpm run dev`).
+
+## Testing Requirements
+Agents MUST ALWAYS add and update unit tests for any new functionality or changes.
+- **Framework:** Vitest, React Testing Library, JSDOM.
+- **Rule 1:** When implementing new UI components, add tests to `tests/ui/` to verify rendering and interactive states.
+- **Rule 2:** When adding new backend data logic or mock generators, add tests to `tests/backend/` to verify mathematical and structural correctness.
+- **Rule 3:** When adding new API routes or server handlers, add tests to `tests/api/` to verify request/response handling and edge cases (like missing keys or errors).
+- **Rule 4:** ALWAYS run `pnpm run test` before finalizing the work to ensure a 100% pass rate.

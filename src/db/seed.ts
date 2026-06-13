@@ -1,38 +1,42 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { db } from './index';
-import { subreddits } from './schema';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { TARGET_SUBREDDITS } from "../data/subreddits";
+import { db } from "./index";
+import { subreddits } from "./schema";
 
 async function seed() {
-  console.log('Seeding subreddits from JSON...');
-  
-  const jsonPath = path.resolve(__dirname, '../data/subreddits.json');
-  const fileContent = fs.readFileSync(jsonPath, 'utf-8');
-  const data = JSON.parse(fileContent);
+	console.log("Seeding subreddits from typed TS array...");
 
-  const targetSubreddits = [];
+	let insertedCount = 0;
 
-  for (const [category, regions] of Object.entries(data)) {
-    for (const [region, subs] of Object.entries(regions as any)) {
-      for (const sub of subs as string[]) {
-        targetSubreddits.push({ name: sub, category });
-      }
-    }
-  }
+	// Insert logic with upsert to avoid duplicate key errors on name
+	for (const group of TARGET_SUBREDDITS) {
+		for (const sub of group.subreddits) {
+			await db
+				.insert(subreddits)
+				.values({
+					name: sub,
+					category: group.category,
+					subCategory: group.subCategory,
+					arpuExpectation: group.arpuExpectation,
+					population: group.population,
+				})
+				.onConflictDoUpdate({
+					target: subreddits.name,
+					set: {
+						category: group.category,
+						subCategory: group.subCategory,
+						arpuExpectation: group.arpuExpectation,
+						population: group.population,
+					},
+				});
+			insertedCount++;
+		}
+	}
 
-  for (const sub of targetSubreddits) {
-    await db.insert(subreddits).values(sub).onConflictDoNothing();
-  }
-  
-  console.log('Seed complete!');
-  process.exit(0);
+	console.log(`Seed complete! Upserted ${insertedCount} subreddits.`);
+	process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
+	console.error(err);
+	process.exit(1);
 });
