@@ -11,7 +11,9 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import { ArpuExpectation, Category } from "../data/subreddits";
+import { Accordion, AccordionItem } from "../components/Accordion";
+import MapChart from "../components/MapChart";
+import { ArpuExpectation, Category, TARGET_SUBREDDITS } from "../data/subreddits";
 import { getMetrics } from "../functions/metrics.functions";
 import { generateMockMetrics } from "../lib/mockData";
 
@@ -24,7 +26,6 @@ export const Route = createFileRoute("/")({
 
 const CustomTooltip = ({ active, payload, label }: any) => {
 	if (active && payload && payload.length) {
-		// Sort descending by growth value
 		const sortedPayload = [...payload].sort((a, b) => b.value - a.value);
 
 		return (
@@ -42,7 +43,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 							<span className="text-[#E2E8F0]">{entry.name}</span>
 						</div>
 						<span
-							className={`font-mono font-medium ${entry.value >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}
+							className={`font-mono font-medium ${entry.value > 1 ? "text-[#10B981]" : entry.value < -1 ? "text-[#EF4444]" : "text-white"}`}
 						>
 							{entry.value > 0 ? "+" : ""}
 							{entry.value.toFixed(1)}%
@@ -55,27 +56,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 	return null;
 };
 
+// Map lookups for subreddits
+const subCategoryMap = new Map<string, string>();
+const arpuMap = new Map<string, ArpuExpectation>();
+TARGET_SUBREDDITS.forEach((group) => {
+	group.subreddits.forEach((sub) => {
+		subCategoryMap.set(sub, group.subCategory);
+		if (group.arpuExpectation) {
+			arpuMap.set(sub, group.arpuExpectation);
+		}
+	});
+});
+
 function Dashboard() {
 	const realData = Route.useLoaderData();
 	const [useMockData, setUseMockData] = useState(false);
 	const [selectedCategory, setSelectedCategory] = useState<Category>(
 		Category.GEOGRAPHY,
 	);
+	const [activeTier, setActiveTier] = useState<"high" | "medium" | "low" | null>(null);
 
-	// Generate mock data only once
 	const mockData = useMemo(() => generateMockMetrics(), []);
 	const data = useMockData ? mockData : realData;
 
-	// Process data for growth calculations
-	const { chartData, latestData, arpuAggregates, countryAggregates } =
-		useMemo(() => {
-			if (!data || data.length === 0)
-				return {
-					chartData: { dataPoints: [], lines: [] },
-					latestData: [],
-					arpuAggregates: { high: 0, medium: 0, low: 0 },
-					countryAggregates: { usa: 0, india: 0, uk: 0 },
-				};
+	const { chartData, latestData, arpuAggregates } = useMemo(() => {
+		if (!data || data.length === 0)
+			return {
+				chartData: { dataPoints: [], lines: [] },
+				latestData: [],
+				arpuAggregates: { high: 0, medium: 0, low: 0 },
+			};
 
 		// 1. Group by Subreddit and sort by date ascending
 		const groupedBySubreddit = new Map<string, any[]>();
@@ -94,15 +104,13 @@ function Dashboard() {
 		// 2. Identify the T0 value for each subreddit
 		const t0Values = new Map<string, number>();
 		groupedBySubreddit.forEach((points, subName) => {
-			// March 31, 2026 is month 2 since getMonth() is zero-indexed
 			let t0Point = points.find((p) => {
 				const d = new Date(p.recordedAt);
 				return (
 					d.getFullYear() === 2026 && d.getMonth() === 2 && d.getDate() === 31
 				);
 			});
-			if (!t0Point) t0Point = points[0]; // fallback to earliest
-
+			if (!t0Point) t0Point = points[0];
 			if (t0Point) t0Values.set(subName, t0Point.weeklyVisitors);
 		});
 
@@ -113,30 +121,50 @@ function Dashboard() {
 			return { ...d, growthPercent: Number(growth.toFixed(2)) };
 		});
 
-		// 4. Build chart data specifically for the selected category
+		// 4. Build chart data aggregated by grouping rule (Max 5 Lines)
 		const filteredForChart = enrichedData.filter(
 			(d: any) => d.category === selectedCategory,
 		);
-		const groupedByDate: Record<string, any> = {};
-		const subredditsInView = new Set<string>();
+		const groupedByDate: Record<string, Record<string, number[]>> = {};
+		const linesInView = new Set<string>();
 
 		filteredForChart.forEach((row: any) => {
 			const dateKey = format(new Date(row.recordedAt), "MMM dd, yyyy");
 			if (!groupedByDate[dateKey]) {
-				groupedByDate[dateKey] = { date: dateKey };
+				groupedByDate[dateKey] = {};
 			}
-			groupedByDate[dateKey][row.name] = row.growthPercent;
-			subredditsInView.add(row.name);
+
+			// Determine bucket based on tab
+			let bucket = "Other";
+			if (selectedCategory === Category.GEOGRAPHY) {
+				const arpu = arpuMap.get(row.name);
+				bucket = arpu ? `${arpu.charAt(0).toUpperCase() + arpu.slice(1)} ARPU` : "Unknown";
+			} else {
+				bucket = subCategoryMap.get(row.name) || "Unknown";
+			}
+
+			if (!groupedByDate[dateKey][bucket]) {
+				groupedByDate[dateKey][bucket] = [];
+			}
+			groupedByDate[dateKey][bucket].push(row.growthPercent);
+			linesInView.add(bucket);
 		});
 
-		const finalChartData = {
-			dataPoints: Object.values(groupedByDate).sort(
-				(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-			),
-			lines: Array.from(subredditsInView),
-		};
+		// Average the buckets for each date
+		const finalDataPoints = Object.entries(groupedByDate).map(([date, buckets]) => {
+			const point: any = { date };
+			Object.entries(buckets).forEach(([bucket, values]) => {
+				const sum = values.reduce((a, b) => a + b, 0);
+				point[bucket] = sum / values.length;
+			});
+			return point;
+		});
 
-		// 5. Get latest data row for each subreddit (for the table and KPI cards)
+		finalDataPoints.sort(
+			(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+		);
+
+		// 5. Get latest data row for each subreddit
 		const latestRowsMap = new Map<string, any>();
 		enrichedData.forEach((row: any) => {
 			const existing = latestRowsMap.get(row.name);
@@ -147,11 +175,9 @@ function Dashboard() {
 				latestRowsMap.set(row.name, row);
 			}
 		});
-		const latestRows = Array.from(latestRowsMap.values()).sort(
-			(a, b) => b.growthPercent - a.growthPercent,
-		);
+		const latestRows = Array.from(latestRowsMap.values());
 
-		// 6. Aggregate Calculations for Tier 1 and Tier 2
+		// 6. Aggregate KPI Calculations (High, Med, Low ARPU)
 		const getAvgGrowth = (filterFn: (row: any) => boolean) => {
 			const subset = latestRows.filter(filterFn);
 			if (subset.length === 0) return 0;
@@ -159,62 +185,64 @@ function Dashboard() {
 			return sum / subset.length;
 		};
 
-		const arpuAggs = {
-			high: getAvgGrowth((r) => r.arpuExpectation === ArpuExpectation.HIGH),
-			medium: getAvgGrowth((r) => r.arpuExpectation === ArpuExpectation.MEDIUM),
-			low: getAvgGrowth((r) => r.arpuExpectation === ArpuExpectation.LOW),
-		};
-
-		// Tier 2 aggregate helper
-		const getCountryAvg = (subs: string[]) => {
-			return getAvgGrowth((r) => subs.includes(r.name));
-		};
-		const countryAggs = {
-			usa: getCountryAvg(["AskAnAmerican", "usa"]),
-			india: getCountryAvg(["india", "cricket", "indiasocial"]),
-			uk: getCountryAvg(["unitedkingdom", "CasualUK"]),
-		};
-
 		return {
-			chartData: finalChartData,
+			chartData: { dataPoints: finalDataPoints, lines: Array.from(linesInView) },
 			latestData: latestRows,
-			arpuAggregates: arpuAggs,
-			countryAggregates: countryAggs,
+			arpuAggregates: {
+				high: getAvgGrowth((r) => arpuMap.get(r.name) === ArpuExpectation.HIGH),
+				medium: getAvgGrowth((r) => arpuMap.get(r.name) === ArpuExpectation.MEDIUM),
+				low: getAvgGrowth((r) => arpuMap.get(r.name) === ArpuExpectation.LOW),
+			},
 		};
 	}, [data, selectedCategory]);
 
-	// Format helpers
-	const formatGrowth = (val: number) =>
-		`${val > 0 ? "+" : ""}${val.toFixed(2)}%`;
+	// Calculate nested data for Accordion based on selectedCategory
+	const accordionData = useMemo(() => {
+		const filtered = latestData.filter((d: any) => d.category === selectedCategory);
+		const groups = new Map<string, any[]>();
 
-	const MetricBadge = ({ label, value }: { label: string; value: number }) => (
-		<div className="flex items-center gap-2 bg-[#162428] border border-[#1F3238] rounded-full px-4 py-1.5 shadow-sm">
-			<span className="text-xs font-semibold text-[#94A3B8] uppercase">
-				{label}
-			</span>
-			<span
-				className={`text-sm font-bold ${value >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}
-			>
-				{formatGrowth(value)}
-			</span>
-		</div>
-	);
+		filtered.forEach((row) => {
+			let bucket = "Other";
+			if (selectedCategory === Category.GEOGRAPHY) {
+				const arpu = arpuMap.get(row.name);
+				bucket = arpu ? `${arpu.charAt(0).toUpperCase() + arpu.slice(1)} ARPU` : "Unknown";
+			} else {
+				bucket = subCategoryMap.get(row.name) || "Unknown";
+			}
+			if (!groups.has(bucket)) groups.set(bucket, []);
+			groups.get(bucket)!.push(row);
+		});
 
+		return Array.from(groups.entries()).map(([groupName, items]) => {
+			const avgGrowth =
+				items.reduce((acc, curr) => acc + curr.growthPercent, 0) / items.length;
+			return {
+				groupName,
+				avgGrowth,
+				items: items.sort((a, b) => b.growthPercent - a.growthPercent),
+			};
+		}).sort((a, b) => b.avgGrowth - a.avgGrowth); // Sort groups by avg growth descending
+	}, [latestData, selectedCategory]);
+
+	const formatGrowth = (val: number) => `${val > 0 ? "+" : ""}${val.toFixed(2)}%`;
+	
+	const getGrowthColorClass = (val: number) => {
+		if (val > 1) return "text-[#10B981]";
+		if (val < -1) return "text-[#EF4444]";
+		return "text-white";
+	};
+
+	// Strict 5 professional terminal colors
 	const colors = [
+		"#6366F1", // Slate Blue
 		"#FF4500", // Reddit Orangered
-		"#10B981", // Success Green
-		"#3B82F6", // Blue
+		"#06B6D4", // Cyan
 		"#F59E0B", // Amber
 		"#8B5CF6", // Purple
-		"#06B6D4", // Cyan
-		"#EC4899", // Pink
-		"#EAB308", // Yellow
-		"#14B8A6", // Teal
-		"#6366F1", // Indigo
 	];
 
 	return (
-		<div className="page-wrap py-10 max-w-7xl">
+		<div className="page-wrap py-10 max-w-7xl mx-auto px-4">
 			{/* Top Bar: Title & Toggle */}
 			<div className="flex justify-between items-center mb-8">
 				<div>
@@ -253,41 +281,56 @@ function Dashboard() {
 			</div>
 
 			{/* Tier 1: Aggregate ARPU KPI Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-				<div className="dash-card p-6 border-t-4 border-t-[#3B82F6]">
-					<h3 className="dash-title">High ARPU Tier (US, UK, CA, DE, FR)</h3>
-					<div
-						className={`mt-2 dash-value ${arpuAggregates.high >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}
-					>
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
+				<button
+					type="button"
+					onClick={() => setActiveTier(activeTier === "high" ? null : "high")}
+					className={`dash-card p-6 border-t-4 border-t-[#FCD34D] text-left transition-all hover:-translate-y-1 ${activeTier === "high" ? "ring-2 ring-[#FCD34D] bg-[#162428]" : ""}`}
+				>
+					<h3 className="dash-title flex items-center gap-2">
+						<span className="w-2.5 h-2.5 rounded-full bg-[#FCD34D]" />
+						High ARPU
+					</h3>
+					<div className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.high)}`}>
 						{formatGrowth(arpuAggregates.high)}
 					</div>
 					<p className="text-xs text-[#94A3B8] mt-1">Average Growth vs Q1</p>
-				</div>
-				<div className="dash-card p-6 border-t-4 border-t-[#F59E0B]">
-					<h3 className="dash-title">Medium ARPU Tier (BR, MX)</h3>
-					<div
-						className={`mt-2 dash-value ${arpuAggregates.medium >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}
-					>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setActiveTier(activeTier === "medium" ? null : "medium")}
+					className={`dash-card p-6 border-t-4 border-t-[#94A3B8] text-left transition-all hover:-translate-y-1 ${activeTier === "medium" ? "ring-2 ring-[#94A3B8] bg-[#162428]" : ""}`}
+				>
+					<h3 className="dash-title flex items-center gap-2">
+						<span className="w-2.5 h-2.5 rounded-full bg-[#94A3B8]" />
+						Medium ARPU
+					</h3>
+					<div className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.medium)}`}>
 						{formatGrowth(arpuAggregates.medium)}
 					</div>
 					<p className="text-xs text-[#94A3B8] mt-1">Average Growth vs Q1</p>
-				</div>
-				<div className="dash-card p-6 border-t-4 border-t-[#10B981]">
-					<h3 className="dash-title">Low ARPU Tier (IN)</h3>
-					<div
-						className={`mt-2 dash-value ${arpuAggregates.low >= 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}
-					>
+				</button>
+
+				<button
+					type="button"
+					onClick={() => setActiveTier(activeTier === "low" ? null : "low")}
+					className={`dash-card p-6 border-t-4 border-t-[#B45309] text-left transition-all hover:-translate-y-1 ${activeTier === "low" ? "ring-2 ring-[#B45309] bg-[#162428]" : ""}`}
+				>
+					<h3 className="dash-title flex items-center gap-2">
+						<span className="w-2.5 h-2.5 rounded-full bg-[#B45309]" />
+						Low ARPU
+					</h3>
+					<div className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.low)}`}>
 						{formatGrowth(arpuAggregates.low)}
 					</div>
 					<p className="text-xs text-[#94A3B8] mt-1">Average Growth vs Q1</p>
-				</div>
+				</button>
 			</div>
 
-			{/* Tier 2: Specific Country Spotlights */}
-			<div className="flex flex-wrap gap-4 mb-8">
-				<MetricBadge label="🇺🇸 United States" value={countryAggregates.usa} />
-				<MetricBadge label="🇬🇧 United Kingdom" value={countryAggregates.uk} />
-				<MetricBadge label="🇮🇳 India" value={countryAggregates.india} />
+			{/* Tier 2: Dynamic Map Component */}
+			<div className="mb-8 p-4 bg-[#0B1416]/50 border border-[#1F3238] rounded-xl flex justify-center">
+				<MapChart activeTier={activeTier} />
 			</div>
 
 			{/* Tier 3: Main Stage Recharts */}
@@ -368,78 +411,64 @@ function Dashboard() {
 				</div>
 			</div>
 
-			{/* Tier 4: Compact Metric Table */}
+			{/* Tier 4: Accordion Metric Table */}
 			<div className="dash-card overflow-hidden">
 				<div className="px-6 py-4 border-b border-[#1F3238] bg-[#162428]">
 					<h2 className="text-lg font-bold text-[#E2E8F0]">
-						Subreddit Performance
+						Aggregated Performance Breakdown
 					</h2>
 				</div>
-				<div className="overflow-x-auto">
-					<table className="w-full text-left border-collapse">
-						<thead className="bg-[#0B1416]/50 border-b border-[#1F3238]">
-							<tr>
-								<th className="px-6 py-3 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Subreddit
-								</th>
-								<th className="px-6 py-3 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Category
-								</th>
-								<th className="px-6 py-3 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider text-right">
-									Current Visitors
-								</th>
-								<th className="px-6 py-3 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider text-right">
-									Growth vs Q1
-								</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-[#1F3238]">
-							{latestData.map((row: any) => (
-								<tr
-									key={row.id}
-									className="hover:bg-[#1F3238]/30 transition-colors"
-								>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<div className="flex items-center">
-											<div className="text-sm font-medium text-[#E2E8F0]">
-												r/{row.name}
-											</div>
-										</div>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap">
-										<span className="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-[#1F3238] text-[#94A3B8]">
-											{row.category.replace(/_/g, " ").toLowerCase()}
-										</span>
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-[#E2E8F0] text-right font-mono">
-										{row.weeklyVisitors.toLocaleString()}
-									</td>
-									<td className="px-6 py-4 whitespace-nowrap text-sm text-right font-mono font-bold">
-										<span
-											className={
-												row.growthPercent >= 0
-													? "text-[#10B981]"
-													: "text-[#EF4444]"
-											}
-										>
-											{formatGrowth(row.growthPercent)}
-										</span>
-									</td>
-								</tr>
-							))}
-							{latestData.length === 0 && (
-								<tr>
-									<td
-										colSpan={4}
-										className="px-6 py-8 text-center text-sm text-[#94A3B8]"
-									>
-										No Subreddit data available.
-									</td>
-								</tr>
-							)}
-						</tbody>
-					</table>
-				</div>
+				<Accordion>
+					{accordionData.length > 0 ? (
+						accordionData.map((group) => (
+							<AccordionItem
+								key={group.groupName}
+								title={group.groupName}
+								value={formatGrowth(group.avgGrowth)}
+								valueClass={getGrowthColorClass(group.avgGrowth)}
+							>
+								<div className="overflow-x-auto">
+									<table className="w-full text-left border-collapse">
+										<thead className="bg-[#0B1416]/30 border-b border-[#1F3238]">
+											<tr>
+												<th className="px-4 py-2 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
+													Subreddit
+												</th>
+												<th className="px-4 py-2 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider text-right">
+													Current Visitors
+												</th>
+												<th className="px-4 py-2 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider text-right">
+													Growth
+												</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y divide-[#1F3238]/50">
+											{group.items.map((row: any) => (
+												<tr key={row.id} className="hover:bg-[#1F3238]/20 transition-colors">
+													<td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#E2E8F0]">
+														r/{row.name}
+													</td>
+													<td className="px-4 py-3 whitespace-nowrap text-sm text-[#E2E8F0] text-right font-mono">
+														{row.weeklyVisitors.toLocaleString()}
+													</td>
+													<td className="px-4 py-3 whitespace-nowrap text-sm text-right font-mono font-bold">
+														<span className={getGrowthColorClass(row.growthPercent)}>
+															{formatGrowth(row.growthPercent)}
+														</span>
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</AccordionItem>
+						))
+					) : (
+						<div className="px-6 py-8 text-center text-sm text-[#94A3B8]">
+							No Subreddit data available.
+						</div>
+					)}
+				</Accordion>
 			</div>
 		</div>
 	);

@@ -40,13 +40,13 @@ describe('Dashboard UI', () => {
     // Verify Dashboard loads
     expect(screen.getByText('Investor Performance Dashboard')).toBeInTheDocument();
     
-    // Verify KPI Cards are rendered
-    expect(screen.getByText('High ARPU Tier (US, UK, CA, DE, FR)')).toBeInTheDocument();
-    expect(screen.getByText('Medium ARPU Tier (BR, MX)')).toBeInTheDocument();
-    expect(screen.getByText('Low ARPU Tier (IN)')).toBeInTheDocument();
+    // Verify KPI Cards are rendered (with new ARPU Titles)
+    expect(screen.getByText('High ARPU')).toBeInTheDocument();
+    expect(screen.getByText('Medium ARPU')).toBeInTheDocument();
+    expect(screen.getByText('Low ARPU')).toBeInTheDocument();
   });
 
-  it('toggles Mock Data correctly', async () => {
+  it('toggles Mock Data correctly and opens accordion', async () => {
     await act(async () => {
       render(<TestWrapper />);
     });
@@ -60,8 +60,19 @@ describe('Dashboard UI', () => {
 
     expect(mockDataToggle).toBeChecked();
 
-    // After toggling, mock data should populate the table and chart.
-    // "r/india" is one of the subreddits, let's verify it renders in the table.
+    // After toggling, mock data should populate the accordion.
+    // The "Low ARPU" accordion item should be present since it's the Geography Tab by default.
+    // It appears twice (once in KPI card, once in Accordion). We want the Accordion one.
+    const elements = screen.getAllByText(/Low ARPU/i, { selector: 'button *' });
+    const lowArpuTrigger = elements[elements.length - 1]; // The accordion is rendered last
+    expect(lowArpuTrigger).toBeInTheDocument();
+
+    // Open the accordion
+    await act(async () => {
+      fireEvent.click(lowArpuTrigger);
+    });
+
+    // Verify a subreddit inside it renders
     expect(screen.getByText('r/india')).toBeInTheDocument();
   });
 });
