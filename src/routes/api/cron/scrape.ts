@@ -3,8 +3,17 @@ import * as cheerio from "cheerio";
 import { db } from "../../../db/index";
 import { subredditMetrics, subreddits } from "../../../db/schema";
 
-export const scrapeHandler = async () => {
+export const scrapeHandler = async ({ request }: { request: Request }) => {
 	const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+	const CRON_SECRET = process.env.CRON_SECRET;
+
+	// Verify Vercel Cron Secret
+	if (CRON_SECRET) {
+		const authHeader = request.headers.get("authorization");
+		if (authHeader !== `Bearer ${CRON_SECRET}`) {
+			return Response.json({ error: "Unauthorized" }, { status: 401 });
+		}
+	}
 
 	if (!SCRAPER_API_KEY) {
 		return Response.json(
