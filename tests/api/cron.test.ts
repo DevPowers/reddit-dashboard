@@ -34,7 +34,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 	it('Scenario 1 - Fresh Run: Should insert data for all subreddits when no history exists', async () => {
 		console.log("Scenario 1 starting...");
-		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3');
 
@@ -72,7 +72,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 	}, 60000);
 
 	it('Scenario 2 - Partial Idempotency: Should skip subreddits that have been scraped recently within the wiggle room', async () => {
-		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3'); // Interval is 72 hours. Cutoff is 60 hours ago.
 
@@ -124,7 +124,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 	}, 60000);
 
 	it('Scenario 3 - Full Interval Bypass: Should perform 0 api calls if all subreddits were scraped 1 day ago', async () => {
-		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3'); // Cutoff 60 hours ago
 
@@ -155,4 +155,39 @@ describe('Cron Job Idempotency & API Integration', () => {
 		// 4. Verify 0 fetch calls were made because the interval logic filtered out all subreddits
 		expect(vi.mocked(fetch)).toHaveBeenCalledTimes(0);
 	}, 15000);
+
+	it('Scenario 4 - Key Rotation: Should rotate keys on fetch failure', async () => {
+		vi.stubEnv('SCRAPER_API_KEY_1', 'key_1_fail');
+		vi.stubEnv('SCRAPER_API_KEY_2', 'key_2_success');
+		vi.stubEnv('CRON_SECRET', 'test_secret');
+		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '0'); // Force scrape
+
+		// Clean history to ensure scraping happens
+		await mockDb.delete(metricsHistory);
+		await mockDb.delete(schema.scraperKeys);
+
+		let fetchCallCount = 0;
+		vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url) => {
+			fetchCallCount++;
+			if (url.includes('key_1_fail')) {
+				return { ok: false, status: 429, statusText: 'Too Many Requests' };
+			}
+			return {
+				ok: true,
+				text: async () => `<shreddit-subreddit-header weekly-active-users="3000" weekly-contributions="100"></shreddit-subreddit-header>`
+			};
+		}));
+
+		const req = new Request('http://localhost/api/cron/scrape', { headers: { 'Authorization': 'Bearer test_secret' } });
+		const response = await scrapeHandler({ request: req });
+		
+		expect(response.status).toBe(200);
+
+		const keys = await mockDb.select().from(schema.scraperKeys).orderBy(schema.scraperKeys.keyIndex);
+		expect(keys.length).toBe(2);
+		expect(keys[0].isActive).toBe(false); // Key 1 errored
+		expect(keys[0].lastStatus).toBe('failed');
+		expect(keys[1].isActive).toBe(true);  // Rotated to Key 2
+		expect(keys[1].lastStatus).toBe('success');
+	}, 30000);
 });

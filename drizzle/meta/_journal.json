@@ -8,6 +8,13 @@
       "when": 1781410794307,
       "tag": "0000_faulty_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781442234923,
+      "tag": "0001_familiar_rockslide",
+      "breakpoints": true
     }
   ]
 }

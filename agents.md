@@ -166,3 +166,22 @@ Agents MUST ALWAYS add and update unit tests for any new functionality or change
 - **Rule 4:** ALWAYS run `pnpm run test` before finalizing the work to ensure a 100% pass rate.
 - **Rule 5:** When modifying database schemas (`schema.ts`), types, or exports, ALWAYS run `npx tsc --noEmit` (or `pnpm run build`) to typecheck the entire project. Vitest does NOT catch missing ESM exports or unresolved imports due to Vite's transpilation process.
 - **Rule 6:** API integration tests must NEVER blindly swallow exceptions with a generic `catch (e) { expect(e).toBeDefined() }`. Tests should either correctly mock the database schema to ensure the structural query works, or explicitly fail if an unexpected SyntaxError or Import error occurs.
+## Page Architecture Standard (Compositional Shell)
+- **Documentation-Style Pages**: All route files (`.tsx` files inside `src/routes/`) MUST act strictly as compositional shells and read like documentation.
+- They should contain minimal inline logic and map directly to imported section components.
+- Example pattern:
+```tsx
+import { SectionA } from "../components/SectionA";
+import { SectionB } from "../components/SectionB";
+
+export function RouteComponent() {
+  return (
+    <div className="page-wrap">
+       <SectionA />
+       <SectionB />
+    </div>
+  );
+}
+```
+- Sub-components must be extracted to `src/components/` and properly typed.
+- Theme hex values (`#HEX`) are strictly prohibited in components. Use Tailwind v4 theme variables (e.g., `text-success`, `bg-obsidian`) defined in `src/styles.css`.

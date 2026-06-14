@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, gte, notInArray } from "drizzle-orm";
+import { eq, gte, notInArray, asc } from "drizzle-orm";
 import { TARGET_SUBREDDITS } from "../../../data/subreddits";
 import { db } from "../../../db/index";
 import {
@@ -9,10 +9,11 @@ import {
 	subredditGroups,
 	subreddits,
 	trackingGroups,
+	scraperKeys,
 } from "../../../db/schema";
+import { logger } from "../../../lib/logger";
 
 export const scrapeHandler = async ({ request }: { request: Request }) => {
-	const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 	const CRON_SECRET = process.env.CRON_SECRET;
 
 	// Verify Vercel Cron Secret
@@ -23,9 +24,17 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		}
 	}
 
-	if (!SCRAPER_API_KEY) {
+	// Extract available keys from env
+	const envKeys = [
+		process.env.SCRAPER_API_KEY_1,
+		process.env.SCRAPER_API_KEY_2,
+		process.env.SCRAPER_API_KEY_3,
+	].filter(Boolean) as string[];
+
+	if (envKeys.length === 0) {
+		logger.error("Cron", "Missing SCRAPER_API_KEY_X environment variables.");
 		return Response.json(
-			{ error: "Missing SCRAPER_API_KEY environment variable." },
+			{ error: "Missing SCRAPER_API_KEY_X environment variables." },
 			{ status: 500 },
 		);
 	}
@@ -35,8 +44,46 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		.returning();
 
 	const startTime = Date.now();
+	logger.info("Cron", "Starting scrape cycle...");
 
 	try {
+		// --- 0. Key Rotation Logic ---
+		let keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+		
+		// Seed if empty
+		if (keysInDb.length === 0) {
+			logger.info("Cron", "Seeding API keys into database.");
+			for (let i = 0; i < envKeys.length; i++) {
+				await db.insert(scraperKeys).values({
+					keyIndex: i + 1,
+					isActive: i === 0, // Default to first key
+				});
+			}
+			keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+		}
+
+		const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		const isLockedOut = (keyRow: typeof keysInDb[0]) => {
+			return keyRow.lastErrorAt && new Date(keyRow.lastErrorAt) > twentyFourHoursAgo;
+		};
+
+		let activeKeyRow = keysInDb.find(k => k.isActive);
+
+		if (!activeKeyRow || isLockedOut(activeKeyRow)) {
+			const availableKeys = keysInDb.filter(k => !isLockedOut(k));
+			if (availableKeys.length === 0) {
+				throw new Error("All ScraperAPI keys have been exhausted/rate-limited within the last 24 hours.");
+			}
+			
+			await db.update(scraperKeys).set({ isActive: false });
+			activeKeyRow = availableKeys[0];
+			await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, activeKeyRow.id));
+			logger.info("Cron", `Rotated active key to index ${activeKeyRow.keyIndex}`);
+		}
+
+		let currentKeyString = envKeys[activeKeyRow.keyIndex - 1];
+		let currentKeyRowId = activeKeyRow.id;
+
 		// --- 1. Auto-Sync Database with TARGET_SUBREDDITS ---
 		const expectedSubNames = new Set<string>();
 		const expectedGroupSubCategories = new Set<string>();
@@ -131,7 +178,6 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		const subs = allSubs.filter((sub) => !scrapedIds.has(sub.id));
 
 		const results: any[] = [];
-		let currentKey = SCRAPER_API_KEY;
 
 		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -141,30 +187,48 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 
 			const batchPromises = batch.map(async (sub) => {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
+				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
+				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 				let response = await fetch(scraperUrl);
 
-				if (
-					(response.status === 429 || response.status === 403) &&
-					process.env.SCRAPER_API_KEY_2
-				) {
-					console.warn(
-						`Key rate limit hit (${response.status}). Switching to backup key...`,
-					);
-					currentKey = process.env.SCRAPER_API_KEY_2;
-					scraperUrl = `https://api.scraperapi.com/?api_key=${currentKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
-					response = await fetch(scraperUrl);
-				}
-
 				if (!response.ok) {
-					return {
-						name: sub.name,
-						status: "failed",
-						error: response.statusText,
-					};
+					logger.warn("Cron", `Fetch failed for ${sub.name} with key index ${activeKeyRow!.keyIndex}`, { status: response.status });
+					
+					// Mark current key as failed
+					await db.update(scraperKeys)
+						.set({ lastErrorAt: new Date(), lastStatus: "failed" })
+						.where(eq(scraperKeys.id, currentKeyRowId));
+						
+					// Attempt Rotation
+					const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+					const fallbackKeyRow = allKeys.find(k => k.id !== currentKeyRowId && (!k.lastErrorAt || new Date(k.lastErrorAt) <= new Date(Date.now() - 24 * 60 * 60 * 1000)));
+					
+					if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
+						logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
+						await db.update(scraperKeys).set({ isActive: false });
+						await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
+						
+						activeKeyRow = fallbackKeyRow;
+						currentKeyRowId = fallbackKeyRow.id;
+						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
+						
+						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
+						response = await fetch(scraperUrl);
+					}
+					
+					if (!response.ok) {
+						logger.error("Cron", `Fallback fetch failed for ${sub.name}`);
+						return {
+							name: sub.name,
+							status: "failed",
+							error: response.statusText,
+						};
+					}
 				}
 
+				await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
 				const html = await response.text();
 				const $ = cheerio.load(html);
 
@@ -214,6 +278,12 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		const finalStatus = failedCount > 0 ? "failed" : "success";
 		const errorMessage = failedCount > 0 ? `${failedCount} subreddits failed to fetch.` : null;
 
+		if (finalStatus === "failed") {
+			logger.warn("Cron", "Scrape cycle completed with failures", { failedCount });
+		} else {
+			logger.info("Cron", "Scrape cycle completed successfully.");
+		}
+
 		await db
 			.update(cronLogs)
 			.set({
@@ -228,6 +298,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 			results,
 		});
 	} catch (e: any) {
+		logger.error("Cron", "Critical error in scrape handler", e);
 		await db
 			.update(cronLogs)
 			.set({

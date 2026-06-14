@@ -62,21 +62,20 @@ describe('Dashboard UI', () => {
 
     expect(mockDataToggle).toBeChecked();
 
-    // After toggling, mock data should populate the accordion.
-    // The "Low ARPU" accordion item should be present since it's the Geography Tab by default.
-    // It appears twice (once in KPI card, once in Accordion). We want the Accordion one.
-    const elements = screen.getAllByText(/Low ARPU/i, { selector: 'button *' });
-    const lowArpuTrigger = elements[elements.length - 1]; // The accordion is rendered last
-    expect(lowArpuTrigger).toBeInTheDocument();
-
-    // Open the accordion
-    await act(async () => {
-      fireEvent.click(lowArpuTrigger);
-    });
-
-    // Verify a subreddit inside it renders (dynamically pulling from config so it won't break if JSON changes)
     const firstLowGeoGroup = TARGET_SUBREDDITS.find(g => g.category === Category.GEOGRAPHY && g.arpuExpectation === 'low');
     const dynamicSub = firstLowGeoGroup ? firstLowGeoGroup.subreddits[0] : 'Unknown';
+    const groupName = firstLowGeoGroup ? firstLowGeoGroup.subCategory : 'Unknown';
+
+    // Now find the Accordion for this group and open it. It should exist because default is Geography.
+    // The AccordionItem has a button containing a span with the groupName.
+    const accordionTrigger = screen.getByText(groupName, { selector: 'span' });
+    expect(accordionTrigger).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(accordionTrigger);
+    });
+
+    // Verify the subreddit inside it renders
     expect(screen.getByText(`r/${dynamicSub}`)).toBeInTheDocument();
   });
 });

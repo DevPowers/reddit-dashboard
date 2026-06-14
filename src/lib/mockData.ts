@@ -7,6 +7,7 @@ export interface MetricRow {
 	name: string;
 	category: string;
 	subCategory: string;
+	monetizationWeight: number;
 	arpuExpectation: string;
 	population: number;
 	weeklyVisitors: number;
@@ -69,6 +70,7 @@ export function generateMockMetrics(): MetricRow[] {
 					name: subName,
 					category: group.category,
 					subCategory: group.subCategory,
+					monetizationWeight: group.monetizationWeight || 1.0,
 					arpuExpectation: group.arpuExpectation || "unknown",
 					population: group.population || 0,
 					weeklyVisitors: visitors,

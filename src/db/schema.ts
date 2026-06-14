@@ -7,6 +7,7 @@ import {
 	serial,
 	timestamp,
 	varchar,
+	boolean,
 } from "drizzle-orm/pg-core";
 
 export const subreddits = pgTable("subreddits", {
@@ -94,4 +95,13 @@ export const cronLogs = pgTable("cron_logs", {
 	errorMessage: varchar("error_message", { length: 1000 }),
 	durationMs: integer("duration_ms"),
 	ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const scraperKeys = pgTable("scraper_keys", {
+	id: serial("id").primaryKey(),
+	keyIndex: integer("key_index").notNull().unique(), // e.g. 1, 2, 3
+	isActive: boolean("is_active").default(false).notNull(),
+	lastStatus: varchar("last_status", { length: 50 }), // 'success' or 'failed'
+	lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+	lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
 });
