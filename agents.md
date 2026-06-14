@@ -185,3 +185,8 @@ export function RouteComponent() {
 ```
 - Sub-components must be extracted to `src/components/` and properly typed.
 - Theme hex values (`#HEX`) are strictly prohibited in components. Use Tailwind v4 theme variables (e.g., `text-success`, `bg-obsidian`) defined in `src/styles.css`.
+
+## React Performance Standards
+- **Memoization Strictness**: Heavy data generation (like `generateMockMetrics`) or complex array mapping MUST be strictly wrapped in `useMemo` hooks with correct dependency arrays. Be extremely cautious about returning new object/array references that bypass downstream `useMemo` caches.
+- **Lookup Optimization**: Never use `Array.find()` or `Array.filter()` inside of loops (O(N²) complexity). Always transform the target array into a `Map` or `Set` first for instant O(1) lookups.
+- **Render Auditing**: When introducing new state (like category toggles or layout changes), ensure those states aren't needlessly causing the entire page data tree to re-evaluate.

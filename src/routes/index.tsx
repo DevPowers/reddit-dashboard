@@ -42,8 +42,11 @@ function Dashboard() {
 		Category.GEOGRAPHY,
 	);
 
+	// Generate mock data only once
+	const mockData = useMemo(() => generateMockMetrics(), []);
+
 	// Determine data source
-	const dataToUse: MetricData[] = useMockData ? generateMockMetrics() : serverData;
+	const dataToUse: MetricData[] = useMockData ? mockData : serverData;
 
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
 	const { latestData, historicalData } = useMemo(() => {
@@ -175,6 +178,12 @@ function Dashboard() {
 			return d.category === Category.ADVERTISING_PLATFORMS;
 		});
 
+		// Optimize historicalData lookup
+		const histMap = new Map();
+		for (const h of historicalData) {
+			histMap.set(h.subredditId, h);
+		}
+
 		// Group by date (ignoring time)
 		const byDate = new Map<string, Record<string, number>>();
 		const uniqueLines = new Set<string>();
@@ -187,7 +196,7 @@ function Dashboard() {
 			const subName = `r/${row.name}`;
 			uniqueLines.add(subName);
 
-			const hist = historicalData.find((h) => h.subredditId === row.subredditId);
+			const hist = histMap.get(row.subredditId);
 			if (hist && hist.weeklyVisitors > 0) {
 				const growth =
 					((row.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) *
