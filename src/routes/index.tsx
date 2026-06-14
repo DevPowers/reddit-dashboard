@@ -154,15 +154,14 @@ function Dashboard() {
 		let totalHistoricalDau = 0;
 		let totalWeightedVelocity = 0;
 
+		const targetDate = new Date();
+		targetDate.setDate(targetDate.getDate() - 28);
+		const targetTime = targetDate.getTime();
+
 		for (const sub of latestData) {
-			// Proxy weekly visitors to roughly DAU
+			// Proxy weekly visitors to roughly DAU for headcount metric
 			const estDau = Math.floor(sub.weeklyVisitors / 7);
 			totalLatestDau += estDau;
-
-			// Velocity Calculation: (Est DAU * Monetization Weight * ARPU multiplier)
-			let arpuMultiplier = 1.0;
-			if (sub.arpuExpectation === ArpuExpectation.HIGH) arpuMultiplier = 1.5;
-			if (sub.arpuExpectation === ArpuExpectation.LOW) arpuMultiplier = 0.5;
 
 			const hist = historicalData.find((h) => h.subredditId === sub.subredditId);
 			let histDau = 0;
@@ -170,9 +169,30 @@ function Dashboard() {
 				histDau = Math.floor(hist.weeklyVisitors / 7);
 				totalHistoricalDau += histDau;
 			}
-			
-			const netNewDau = estDau - histDau;
-			totalWeightedVelocity += netNewDau * sub.monetizationWeight * arpuMultiplier;
+
+			// Monetizable Velocity Index: (Latest WAU - Rolling 28-Day Baseline WAU) * arpuMultiplier * monetizationWeight
+			const subHistory = dataToUse
+				.filter((d) => d.subredditId === sub.subredditId)
+				.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+
+			let baselineWau = sub.weeklyVisitors;
+			if (subHistory.length > 0) {
+				// Find closest to 28 days ago, or oldest if less than 28 days
+				let bestMatch = subHistory[0];
+				let smallestDiff = Math.abs(new Date(bestMatch.recordedAt).getTime() - targetTime);
+
+				for (const point of subHistory) {
+					const diff = Math.abs(new Date(point.recordedAt).getTime() - targetTime);
+					if (diff < smallestDiff) {
+						smallestDiff = diff;
+						bestMatch = point;
+					}
+				}
+				baselineWau = bestMatch.weeklyVisitors;
+			}
+
+			const velocity = (sub.weeklyVisitors - baselineWau) * sub.arpuMultiplier * sub.monetizationWeight;
+			totalWeightedVelocity += velocity;
 		}
 
 		const overallGrowthPercent =
@@ -186,12 +206,14 @@ function Dashboard() {
 			overallNetNew,
 			weightedVelocity: totalWeightedVelocity,
 		};
-	}, [latestData, historicalData]);
+	}, [latestData, historicalData, dataToUse]);
 
 	// Calculate ARPU Tier Aggregates
 	const arpuAggregates = useMemo(() => {
 		const calcTierGrowth = (tier: string) => {
-			const subs = latestData.filter((s) => s.arpuExpectation === tier);
+			const subs = latestData.filter(
+				(s) => s.category === Category.GEOGRAPHY && s.arpuExpectation === tier
+			);
 			if (subs.length === 0) return 0;
 			const totalGrowth = subs.reduce(
 				(sum, sub) => sum + (sub.growthPercent || 0),

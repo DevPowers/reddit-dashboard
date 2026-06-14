@@ -20,6 +20,7 @@ async function seed() {
 				subCategory: group.subCategory,
 				monetizationWeight: group.monetizationWeight,
 				arpuExpectation: group.arpuExpectation,
+				arpuMultiplier: group.arpuMultiplier,
 				population: group.population,
 			})
 			.onConflictDoUpdate({
@@ -28,6 +29,7 @@ async function seed() {
 					category: group.category,
 					monetizationWeight: group.monetizationWeight,
 					arpuExpectation: group.arpuExpectation,
+					arpuMultiplier: group.arpuMultiplier,
 					population: group.population,
 				},
 			})

@@ -21,6 +21,7 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 				subCategory: trackingGroups.subCategory,
 				monetizationWeight: trackingGroups.monetizationWeight,
 				arpuExpectation: trackingGroups.arpuExpectation,
+				arpuMultiplier: trackingGroups.arpuMultiplier,
 				population: trackingGroups.population,
 				weeklyVisitors: metricsHistory.weeklyVisitors,
 				weeklyContributions: metricsHistory.weeklyContributions,

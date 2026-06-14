@@ -15,6 +15,7 @@ export interface TrackedGroup {
 	category: Category;
 	subCategory: string; // e.g., "Meta", "Gaming", or "United States"
 	monetizationWeight: number;
+	arpuMultiplier: number;
 	arpuExpectation?: ArpuExpectation;
 	population?: number;
 	subreddits: string[];
