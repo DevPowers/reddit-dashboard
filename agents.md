@@ -103,27 +103,42 @@ Using Cheerio, the scraper will parse the DOM and extract the two new public eng
 - `r/PPC` (Google Ads / General)
 
 ## Database Schema (Drizzle)
-Agents must implement the following two tables:
+Agents must implement the following three tables:
 
 1. `subreddits`:
    - `id`: serial / primary key
    - `name`: varchar (e.g., 'redditads')
    - `category`: varchar ('geography' or 'advertising')
-   - `created_at`: timestamp
+   - `created_at`: timestamptz
 
 2. `subreddit_metrics`:
    - `id`: serial / primary key
    - `subreddit_id`: integer / foreign key
    - `weekly_visitors`: integer
    - `weekly_contributions`: integer
-   - `recorded_at`: timestamp (default now)
+   - `recorded_at`: timestamptz (default now)
 
-## Backend Scraper (Server Function)
-- Create a TanStack `createServerFn` that loops through the `subreddits` table.
-- Fetch the raw HTML for each subreddit using ScraperAPI to bypass Cloudflare.
-- Load the HTML payload into Cheerio and extract `weekly_visitors` and `weekly_contributions` from `<shreddit-subreddit-header>`.
-- Insert a new row for each subreddit into `subreddit_metrics`.
-- Expose this function via an API route (`/api/cron/scrape`) so it can be triggered daily by an external cron job (GitHub Actions or Vercel Cron).
+3. `cron_logs`:
+   - `id`: serial / primary key
+   - `status`: varchar ('running', 'success', 'failed')
+   - `errorMessage`: varchar
+   - `durationMs`: integer (tracks execution time)
+   - `ranAt`: timestamptz (default now)
+
+## Backend Scraper (API Route `/api/cron/scrape`)
+- Handles the actual scraping execution and deduplication.
+- Scraper bypasses Cloudflare using ScraperAPI.
+- Enforces a 1-run-per-day limit by checking `cron_logs`.
+- Logs `status: 'running'` immediately upon boot, then captures elapsed milliseconds before logging `success` or `failed`.
+- Requires `CRON_SECRET` Bearer token for authentication.
+
+## Admin Portal (`/admin`)
+- Real-time diagnostics dashboard.
+- Uses a native TanStack Router `useEffect` to poll `router.invalidate()` every 15 seconds if `isRunning === true`.
+- Displays Database Health, Total Scrapes, Scrape Duration (Averages), and Last Run exact execution times.
+
+## TypeScript Architecture
+- **Dedicated Types File:** All reusable TypeScript types, interfaces, and enums (like `Category`, `ArpuExpectation`, and `TrackedGroup`) MUST be placed in `src/types/index.ts`. Do not clutter data or component files with exported types.
 
 ## UI & Design Guidelines
 - Agents must reference `DESIGN.md` (generated via Google Stitch) for all styling primitives, spacing, and color hexes.
@@ -145,3 +160,5 @@ Agents MUST ALWAYS add and update unit tests for any new functionality or change
 - **Rule 2:** When adding new backend data logic or mock generators, add tests to `tests/backend/` to verify mathematical and structural correctness.
 - **Rule 3:** When adding new API routes or server handlers, add tests to `tests/api/` to verify request/response handling and edge cases (like missing keys or errors).
 - **Rule 4:** ALWAYS run `pnpm run test` before finalizing the work to ensure a 100% pass rate.
+- **Rule 5:** When modifying database schemas (`schema.ts`), types, or exports, ALWAYS run `npx tsc --noEmit` (or `pnpm run build`) to typecheck the entire project. Vitest does NOT catch missing ESM exports or unresolved imports due to Vite's transpilation process.
+- **Rule 6:** API integration tests must NEVER blindly swallow exceptions with a generic `catch (e) { expect(e).toBeDefined() }`. Tests should either correctly mock the database schema to ensure the structural query works, or explicitly fail if an unexpected SyntaxError or Import error occurs.

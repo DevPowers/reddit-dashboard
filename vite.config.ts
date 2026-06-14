@@ -17,10 +17,10 @@ const config = defineConfig({
 		viteReact(),
 	],
 	test: {
-		environment: 'jsdom',
-		setupFiles: ['./vitest.setup.tsx'],
+		environment: "jsdom",
+		setupFiles: ["./vitest.setup.tsx"],
 		globals: true,
-	}
+	},
 });
 
 export default config;

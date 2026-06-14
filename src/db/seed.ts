@@ -1,6 +1,10 @@
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
 import { TARGET_SUBREDDITS } from "../data/subreddits";
 import { db } from "./index";
-import { subreddits } from "./schema";
+import { subredditGroups, subreddits, trackingGroups } from "./schema";
 
 async function seed() {
 	console.log("Seeding subreddits from typed TS array...");
@@ -9,25 +13,46 @@ async function seed() {
 
 	// Insert logic with upsert to avoid duplicate key errors on name
 	for (const group of TARGET_SUBREDDITS) {
-		for (const sub of group.subreddits) {
-			await db
-				.insert(subreddits)
-				.values({
-					name: sub,
+		const [insertedGroup] = await db
+			.insert(trackingGroups)
+			.values({
+				category: group.category,
+				subCategory: group.subCategory,
+				monetizationWeight: group.monetizationWeight,
+				arpuExpectation: group.arpuExpectation,
+				population: group.population,
+			})
+			.onConflictDoUpdate({
+				target: trackingGroups.subCategory,
+				set: {
 					category: group.category,
-					subCategory: group.subCategory,
+					monetizationWeight: group.monetizationWeight,
 					arpuExpectation: group.arpuExpectation,
 					population: group.population,
-				})
+				},
+			})
+			.returning({ id: trackingGroups.id });
+
+		const groupId = insertedGroup.id;
+
+		for (const sub of group.subreddits) {
+			const [insertedSub] = await db
+				.insert(subreddits)
+				.values({ name: sub })
 				.onConflictDoUpdate({
 					target: subreddits.name,
-					set: {
-						category: group.category,
-						subCategory: group.subCategory,
-						arpuExpectation: group.arpuExpectation,
-						population: group.population,
-					},
-				});
+					set: { name: sub },
+				})
+				.returning({ id: subreddits.id });
+
+			await db
+				.insert(subredditGroups)
+				.values({
+					subredditId: insertedSub.id,
+					groupId: groupId,
+				})
+				.onConflictDoNothing();
+
 			insertedCount++;
 		}
 	}

@@ -1,0 +1,19 @@
+{
+  "geographical": {
+    "North America": ["canada", "mexico", "usa"],
+    "Europe": ["de", "france", "unitedkingdom", "europe"],
+    "South America": ["brasil", "argentina"],
+    "Asia": ["india", "japan"],
+    "Oceania": ["australia", "newzealand"]
+  },
+  "advertiser": {
+    "Meta": ["FacebookAds", "InstagramMarketing"],
+    "Reddit": ["redditads"],
+    "Google": ["PPC", "adwords"],
+    "General": ["marketing", "advertising"]
+  },
+  "general": {
+    "Discussion": ["AskReddit", "CasualConversation"],
+    "Business": ["Entrepreneur", "smallbusiness", "startups"]
+  }
+}

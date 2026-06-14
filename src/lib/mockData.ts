@@ -1,4 +1,5 @@
-import { Category, TARGET_SUBREDDITS } from "../data/subreddits";
+import { TARGET_SUBREDDITS } from "../data/subreddits";
+import { Category } from "../types";
 
 export interface MetricRow {
 	id: number;
@@ -16,6 +17,8 @@ export interface MetricRow {
 export function generateMockMetrics(): MetricRow[] {
 	const mockData: MetricRow[] = [];
 	let idCounter = 1;
+	let subIdCounter = 1;
+	const subIdMap = new Map<string, number>();
 
 	// Base Anchor Date: March 31, 2026
 	const anchorDate = new Date("2026-03-31T00:00:00Z");
@@ -27,8 +30,8 @@ export function generateMockMetrics(): MetricRow[] {
 	);
 	const daysToGenerate = Math.max(1, totalDays);
 
-	TARGET_SUBREDDITS.forEach((group, groupIdx) => {
-		group.subreddits.forEach((subName, subIdx) => {
+	TARGET_SUBREDDITS.forEach((group, _groupIdx) => {
+		group.subreddits.forEach((subName, _subIdx) => {
 			// Base metrics logic
 			let baseVisitors = 50000;
 			if (group.population) {
@@ -54,9 +57,15 @@ export function generateMockMetrics(): MetricRow[] {
 				const visitors = Math.floor(baseVisitors * trendFactor * noise);
 				const contributions = Math.floor(visitors * 0.05); // ~5% contribute
 
+				let currentSubId = subIdMap.get(subName);
+				if (!currentSubId) {
+					currentSubId = subIdCounter++;
+					subIdMap.set(subName, currentSubId);
+				}
+
 				mockData.push({
 					id: idCounter++,
-					subredditId: groupIdx * 100 + subIdx, // arbitrary IDs
+					subredditId: currentSubId,
 					name: subName,
 					category: group.category,
 					subCategory: group.subCategory,

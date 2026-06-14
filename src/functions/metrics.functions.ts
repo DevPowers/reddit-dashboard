@@ -1,26 +1,40 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index";
-import { subredditMetrics, subreddits } from "../db/schema";
+import {
+	metricsHistory,
+	subredditGroups,
+	subreddits,
+	trackingGroups,
+} from "../db/schema";
 
 export const getMetrics = createServerFn({ method: "GET" }).handler(
 	async () => {
 		// Join subreddits and subreddit_metrics to return a flat list of time-series data
 		const data = await db
 			.select({
-				id: subredditMetrics.id,
+				id: metricsHistory.id,
 				subredditId: subreddits.id,
 				name: subreddits.name,
-				category: subreddits.category,
-				subCategory: subreddits.subCategory,
-				arpuExpectation: subreddits.arpuExpectation,
-				population: subreddits.population,
-				weeklyVisitors: subredditMetrics.weeklyVisitors,
-				weeklyContributions: subredditMetrics.weeklyContributions,
-				recordedAt: subredditMetrics.recordedAt,
+				category: trackingGroups.category,
+				subCategory: trackingGroups.subCategory,
+				monetizationWeight: trackingGroups.monetizationWeight,
+				arpuExpectation: trackingGroups.arpuExpectation,
+				population: trackingGroups.population,
+				weeklyVisitors: metricsHistory.weeklyVisitors,
+				weeklyContributions: metricsHistory.weeklyContributions,
+				recordedAt: metricsHistory.recordedAt,
 			})
-			.from(subredditMetrics)
-			.innerJoin(subreddits, eq(subredditMetrics.subredditId, subreddits.id));
+			.from(metricsHistory)
+			.innerJoin(subreddits, eq(metricsHistory.subredditId, subreddits.id))
+			.innerJoin(
+				subredditGroups,
+				eq(subreddits.id, subredditGroups.subredditId),
+			)
+			.innerJoin(
+				trackingGroups,
+				eq(subredditGroups.groupId, trackingGroups.id),
+			);
 
 		return data;
 	},

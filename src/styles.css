@@ -84,7 +84,6 @@ a:hover {
 .dash-value {
   font-size: 1.875rem;
   font-weight: 700;
-  color: var(--text-main);
 }
 
 /* Recharts Custom Tooltip */

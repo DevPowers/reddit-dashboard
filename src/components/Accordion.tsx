@@ -1,8 +1,13 @@
 import { ChevronDown } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 
 export function Accordion({ children }: { children: React.ReactNode }) {
-	return <div className="divide-y divide-[#1F3238] border-b border-[#1F3238]">{children}</div>;
+	return (
+		<div className="divide-y divide-[#1F3238] border-b border-[#1F3238]">
+			{children}
+		</div>
+	);
 }
 
 export function AccordionItem({
@@ -36,9 +41,7 @@ export function AccordionItem({
 				</div>
 				<div className="flex items-center gap-4">
 					<span className="text-xs text-[#94A3B8]">Avg Growth:</span>
-					<span
-						className={`text-sm font-mono font-bold ${valueClass}`}
-					>
+					<span className={`text-sm font-mono font-bold ${valueClass}`}>
 						{value}
 					</span>
 				</div>

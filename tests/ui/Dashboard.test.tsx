@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { Suspense } from 'react';
+import { TARGET_SUBREDDITS } from '../../src/data/subreddits';
+import { Category } from '../../src/types';
 
 // Mock DB to prevent postgres from connecting during imports
 vi.mock('../../src/db/index', () => ({
@@ -72,7 +74,9 @@ describe('Dashboard UI', () => {
       fireEvent.click(lowArpuTrigger);
     });
 
-    // Verify a subreddit inside it renders
-    expect(screen.getByText('r/india')).toBeInTheDocument();
+    // Verify a subreddit inside it renders (dynamically pulling from config so it won't break if JSON changes)
+    const firstLowGeoGroup = TARGET_SUBREDDITS.find(g => g.category === Category.GEOGRAPHY && g.arpuExpectation === 'low');
+    const dynamicSub = firstLowGeoGroup ? firstLowGeoGroup.subreddits[0] : 'Unknown';
+    expect(screen.getByText(`r/${dynamicSub}`)).toBeInTheDocument();
   });
 });

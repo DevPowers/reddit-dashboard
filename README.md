@@ -1,36 +1,42 @@
 # Reddit Investor Dashboard
 
-A single-repo, full-stack investor dashboard to track geographical user growth and advertising sentiment across Reddit. Built with TanStack Start, React, Tailwind CSS, and Supabase Postgres.
+A single-repo, full-stack investor dashboard to track geographical user growth, advertising sentiment, and advertiser growth across Reddit. 
 
-## Prerequisites
+## Features
+- **Daily Scraping:** Automated background scraper that bypasses Cloudflare using ScraperAPI.
+- **Analytics UI:** A gorgeous dashboard for time-series visualization using Recharts.
+- **Admin Portal:** Live UI polling, execution duration metrics, and database health.
+- **Framework:** TanStack Start (React + Vite + TanStack Router).
+- **Database:** Supabase (PostgreSQL) + Drizzle ORM.
 
-1. Set up your `.env` file based on `.env.example`:
-   - `SCRAPER_API_KEY`: Your ScraperAPI key used to bypass Reddit's bot protection.
-   - `DATABASE_URL`: Your PostgreSQL connection string.
+## Setup Instructions
 
-## Getting Started
-
-1. **Install Dependencies**
+1. **Install Dependencies:**
    ```bash
    pnpm install
    ```
 
-2. **Database Setup**
-   Push the Drizzle ORM schema to your Postgres database:
+2. **Environment Variables:**
+   Create a `.env` file in the root directory:
+   ```env
+   DATABASE_URL="postgres://postgres.xxxxx:xxxxx@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+   SCRAPER_API_KEY="your_scraperapi_key"
+   CRON_SECRET="your_secret_password"
+   ```
+
+3. **Push the Database Schema:**
    ```bash
    pnpm run db:push
    ```
 
-3. **Start the Development Server**
+4. **Start the Development Server:**
    ```bash
    pnpm run dev
    ```
-   *Note: In Antigravity IDE, you can easily launch the app by opening the Run/Debug panel and clicking the Play button next to **"Start Dev Server"** (configured via `.vscode/launch.json`).*
 
-## Scripts
-
-- `pnpm run dev`: Starts the Vite dev server
-- `pnpm run build`: Builds the application for production
-- `pnpm run start`: Runs the built production server
-- `pnpm run format`: Formats code with Biome
-- `pnpm run lint`: Lints code with Biome
+## Production Deployment (Vercel)
+This app is designed to be deployed to Vercel.
+1. Push your code to GitHub.
+2. Import the repository into Vercel.
+3. Add `DATABASE_URL`, `SCRAPER_API_KEY`, and `CRON_SECRET` to the Vercel Environment Variables.
+4. Set up Vercel Cron to hit `/api/cron/scrape` using the `CRON_SECRET` in the Authorization header.
