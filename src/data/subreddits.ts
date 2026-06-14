@@ -192,4 +192,13 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         population: 115559000,
         subreddits: ["Philippines", "ChikaPH", "phinvest"],
     },
+    // ==========================================
+    // --- 6. PERSONAL TRACKING ---
+    // ==========================================
+    {
+        category: Category.PERSONAL_TRACKING,
+        subCategory: "Personal",
+        monetizationWeight: 0,
+        subreddits: ["fire", "redditstock"],
+    }
 ];

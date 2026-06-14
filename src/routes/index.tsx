@@ -61,12 +61,20 @@ function Dashboard() {
 	const dataToUse: MetricData[] = useMockData ? mockData : serverData;
 
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
-	const { latestData, historicalData } = useMemo(() => {
+	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
 		const latestMap = new Map<number, MetricData>();
 		const historicalMap = new Map<number, MetricData>();
 
-		// T0 Benchmark Date: March 31, 2026
-		const T0_DATE = new Date("2026-03-31T00:00:00Z");
+		// Dynamically determine most recent quarter end date
+		const today = new Date();
+		const year = today.getFullYear();
+		const month = today.getMonth(); // 0-11
+		
+		let T0_DATE: Date;
+		if (month >= 3 && month < 6) T0_DATE = new Date(`${year}-03-31T00:00:00Z`);
+		else if (month >= 6 && month < 9) T0_DATE = new Date(`${year}-06-30T00:00:00Z`);
+		else if (month >= 9 && month < 12) T0_DATE = new Date(`${year}-09-30T00:00:00Z`);
+		else T0_DATE = new Date(`${year - 1}-12-31T00:00:00Z`);
 
 		for (const row of dataToUse) {
 			const recordedAtDate = new Date(row.recordedAt);
@@ -90,10 +98,19 @@ function Dashboard() {
 			}
 		}
 
-		// Fallback for T0: If no data exists before March 31, find the EARLIEST record in the dataset.
+		let actualBaselineDate = T0_DATE;
+
+		// Fallback for T0: If no data exists before T0_DATE, find the EARLIEST record in the dataset.
 		if (historicalMap.size === 0 && dataToUse.length > 0) {
 			const earliestPerSub = new Map<number, MetricData>();
+			let globalEarliest: Date | null = null;
+
 			for (const row of dataToUse) {
+				const rowDate = new Date(row.recordedAt);
+				if (!globalEarliest || rowDate < globalEarliest) {
+					globalEarliest = rowDate;
+				}
+
 				const currentEarliest = earliestPerSub.get(row.subredditId);
 				if (
 					!currentEarliest ||
@@ -104,6 +121,10 @@ function Dashboard() {
 			}
 			for (const [subId, row] of earliestPerSub.entries()) {
 				historicalMap.set(subId, row);
+			}
+
+			if (globalEarliest) {
+				actualBaselineDate = globalEarliest;
 			}
 		}
 
@@ -123,6 +144,7 @@ function Dashboard() {
 		return {
 			latestData: latestList,
 			historicalData: Array.from(historicalMap.values()),
+			baselineDateStr: format(actualBaselineDate, "MMMM d, yyyy")
 		};
 	}, [dataToUse]);
 
@@ -142,12 +164,15 @@ function Dashboard() {
 			if (sub.arpuExpectation === ArpuExpectation.HIGH) arpuMultiplier = 1.5;
 			if (sub.arpuExpectation === ArpuExpectation.LOW) arpuMultiplier = 0.5;
 
-			totalWeightedVelocity += estDau * sub.monetizationWeight * arpuMultiplier;
-
 			const hist = historicalData.find((h) => h.subredditId === sub.subredditId);
+			let histDau = 0;
 			if (hist) {
-				totalHistoricalDau += Math.floor(hist.weeklyVisitors / 7);
+				histDau = Math.floor(hist.weeklyVisitors / 7);
+				totalHistoricalDau += histDau;
 			}
+			
+			const netNewDau = estDau - histDau;
+			totalWeightedVelocity += netNewDau * sub.monetizationWeight * arpuMultiplier;
 		}
 
 		const overallGrowthPercent =
@@ -290,10 +315,10 @@ function Dashboard() {
 			<div className="flex justify-between items-center mb-8">
 				<div>
 					<h1 className="text-3xl font-extrabold text-text-main tracking-tight">
-						Investor Performance Dashboard
+						Reddit Performance Dashboard
 					</h1>
 					<p className="text-text-muted text-sm mt-1">
-						Time-series percentage growth measured against March 31, 2026.
+						Time-series percentage growth measured against {baselineDateStr}.
 					</p>
 				</div>
 				<div className="flex items-center gap-3 bg-obsidian-light px-4 py-2 border border-obsidian-border rounded-md shadow-sm">

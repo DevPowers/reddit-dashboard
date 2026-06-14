@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RSubredditRouteImport } from './routes/r.$subreddit'
 import { Route as ApiRedditSubredditRouteImport } from './routes/api/reddit.$subreddit'
 import { Route as ApiCronScrapeRouteImport } from './routes/api/cron/scrape'
 
@@ -22,6 +23,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RSubredditRoute = RSubredditRouteImport.update({
+  id: '/r/$subreddit',
+  path: '/r/$subreddit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRedditSubredditRoute = ApiRedditSubredditRouteImport.update({
@@ -38,12 +44,14 @@ const ApiCronScrapeRoute = ApiCronScrapeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
   '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
   '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
@@ -51,18 +59,30 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
   '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/api/cron/scrape' | '/api/reddit/$subreddit'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/r/$subreddit'
+    | '/api/cron/scrape'
+    | '/api/reddit/$subreddit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/api/cron/scrape' | '/api/reddit/$subreddit'
+  to:
+    | '/'
+    | '/admin'
+    | '/r/$subreddit'
+    | '/api/cron/scrape'
+    | '/api/reddit/$subreddit'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/r/$subreddit'
     | '/api/cron/scrape'
     | '/api/reddit/$subreddit'
   fileRoutesById: FileRoutesById
@@ -70,6 +90,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  RSubredditRoute: typeof RSubredditRoute
   ApiCronScrapeRoute: typeof ApiCronScrapeRoute
   ApiRedditSubredditRoute: typeof ApiRedditSubredditRoute
 }
@@ -88,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$subreddit': {
+      id: '/r/$subreddit'
+      path: '/r/$subreddit'
+      fullPath: '/r/$subreddit'
+      preLoaderRoute: typeof RSubredditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/reddit/$subreddit': {
@@ -110,6 +138,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  RSubredditRoute: RSubredditRoute,
   ApiCronScrapeRoute: ApiCronScrapeRoute,
   ApiRedditSubredditRoute: ApiRedditSubredditRoute,
 }

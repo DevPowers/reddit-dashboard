@@ -1,4 +1,4 @@
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 
@@ -35,8 +35,38 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
-			<body className="font-sans antialiased [overflow-wrap:anywhere] bg-[#0B1416] text-[#D7E3E8] selection:bg-[#FF4500]/20">
-				{children}
+			<body className="font-sans antialiased [overflow-wrap:anywhere] bg-[#0B1416] text-[#D7E3E8] selection:bg-[#FF4500]/20 flex flex-col min-h-screen">
+				<header className="sticky top-0 z-50 w-full backdrop-blur-md bg-obsidian/80 border-b border-obsidian-border">
+					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+						<div className="flex h-14 items-center justify-between">
+							<div className="flex items-center gap-6">
+								<span className="font-bold text-white tracking-wider">
+									REDDIT<span className="text-orangered">INVESTOR</span>
+								</span>
+								<nav className="flex gap-4">
+									<Link
+										to="/"
+										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
+										activeProps={{ className: "text-white border-b-2 border-white" }}
+										activeOptions={{ exact: true }}
+									>
+										Dashboard
+									</Link>
+									<Link
+										to="/admin"
+										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
+										activeProps={{ className: "text-white border-b-2 border-white" }}
+									>
+										Admin
+									</Link>
+								</nav>
+							</div>
+						</div>
+					</div>
+				</header>
+				<main className="flex-1">
+					{children}
+				</main>
 				<Scripts />
 			</body>
 		</html>

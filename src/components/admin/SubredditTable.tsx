@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 export function SubredditTable({ subreddits }: { subreddits: any[] }) {
+	const navigate = useNavigate();
 	const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "data_points", direction: "desc" });
 
 	const sortedSubreddits = [...subreddits].sort((a: any, b: any) => {
@@ -95,10 +97,15 @@ export function SubredditTable({ subreddits }: { subreddits: any[] }) {
 						{sortedSubreddits.map((sub: any) => (
 							<tr
 								key={sub.id}
-								className="hover:bg-obsidian-light/50 transition-colors"
+								onClick={() => navigate({ to: "/r/$subreddit", params: { subreddit: sub.name } })}
+								className="group cursor-pointer hover:bg-white/5 transition-colors"
 							>
 								<td className="px-6 py-4 whitespace-nowrap">
-									<div className="font-semibold text-white">r/{sub.name}</div>
+									<div 
+										className="font-semibold text-white group-hover:text-orangered transition-colors"
+									>
+										r/{sub.name}
+									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
 									{sub.category}

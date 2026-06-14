@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, gte, notInArray, asc } from "drizzle-orm";
+import { eq, gte, notInArray, asc, inArray } from "drizzle-orm";
 import { TARGET_SUBREDDITS } from "../../../data/subreddits";
 import { db } from "../../../db/index";
 import {

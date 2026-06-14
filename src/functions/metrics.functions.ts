@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { db } from "../db/index";
+import { Category } from "../types";
 import {
 	metricsHistory,
 	subredditGroups,
@@ -34,7 +35,8 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 			.innerJoin(
 				trackingGroups,
 				eq(subredditGroups.groupId, trackingGroups.id),
-			);
+			)
+			.where(ne(trackingGroups.category, Category.PERSONAL_TRACKING));
 
 		return data;
 	},
