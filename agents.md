@@ -102,6 +102,10 @@ Using Cheerio, the scraper will parse the DOM and extract the two new public eng
 - `r/FacebookAds` (Meta Platform)
 - `r/PPC` (Google Ads / General)
 
+## Database Management
+- **No Data Deletion**: Do NOT drop, delete, or wipe the production database or completely scrap it going forward.
+- **Migrations**: Any future database schema changes must be handled gracefully using proper Drizzle migration scripts instead of destructive wiping.
+
 ## Database Schema (Drizzle)
 Agents must implement the following three tables:
 

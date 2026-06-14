@@ -130,7 +130,20 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		}
 
 		// --- 2. Fetch Sync'd Subs and Scrape ---
-		const subs = await db.select().from(subreddits);
+		const allSubs = await db.select().from(subreddits);
+		
+		// Find which subreddits have already been scraped today (UTC)
+		const startOfToday = new Date();
+		startOfToday.setUTCHours(0, 0, 0, 0);
+
+		const alreadyScrapedToday = await db
+			.select({ subredditId: metricsHistory.subredditId })
+			.from(metricsHistory)
+			.where(gte(metricsHistory.recordedAt, startOfToday));
+
+		const scrapedIds = new Set(alreadyScrapedToday.map((r) => r.subredditId));
+		const subs = allSubs.filter((sub) => !scrapedIds.has(sub.id));
+
 		const results: any[] = [];
 		let currentKey = SCRAPER_API_KEY;
 
