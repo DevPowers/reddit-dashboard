@@ -105,6 +105,7 @@ Using Cheerio, the scraper will parse the DOM and extract the two new public eng
 ## Database Management
 - **No Data Deletion**: Do NOT drop, delete, or wipe the production database or completely scrap it going forward.
 - **Migrations**: Any future database schema changes must be handled gracefully using proper Drizzle migration scripts instead of destructive wiping.
+- **Schema Syncing**: ALWAYS remember to run `pnpm run db:push` immediately after creating or modifying tables in `schema.ts`. Failing to do so will cause the application and cron jobs to crash because the Postgres database will be out of sync with the codebase.
 
 ## Database Schema (Drizzle)
 Agents must implement the following three tables:
