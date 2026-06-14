@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { and, eq, gte, notInArray } from "drizzle-orm";
+import { eq, gte, notInArray } from "drizzle-orm";
 import { TARGET_SUBREDDITS } from "../../../data/subreddits";
 import { db } from "../../../db/index";
 import {
@@ -29,23 +29,6 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 			{ status: 500 },
 		);
 	}
-	const threeDaysAgo = new Date();
-	threeDaysAgo.setUTCDate(threeDaysAgo.getUTCDate() - 2);
-	threeDaysAgo.setUTCHours(0, 0, 0, 0);
-
-	const recentRuns = await db
-		.select()
-		.from(cronLogs)
-		.where(
-			and(eq(cronLogs.status, "success"), gte(cronLogs.ranAt, threeDaysAgo)),
-		);
-
-	if (recentRuns.length > 0) {
-		return Response.json({
-			message: "Already scraped within the last 3 days.",
-		});
-	}
-
 	const [log] = await db
 		.insert(cronLogs)
 		.values({ status: "running" })
@@ -132,16 +115,19 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		// --- 2. Fetch Sync'd Subs and Scrape ---
 		const allSubs = await db.select().from(subreddits);
 		
-		// Find which subreddits have already been scraped today (UTC)
-		const startOfToday = new Date();
-		startOfToday.setUTCHours(0, 0, 0, 0);
+		// Find which subreddits have already been scraped within the interval
+		const scrapeIntervalDays = parseInt(process.env.SCRAPE_INTERVAL_DAYS || "3", 10);
+		// Subtract a 12 hour wiggle room from the interval to prevent drift issues
+		// E.g., if interval is 3 days (72 hours), cutoff is 60 hours ago.
+		const cutoffHours = (scrapeIntervalDays * 24) - 12;
+		const cutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
 
-		const alreadyScrapedToday = await db
+		const recentScrapes = await db
 			.select({ subredditId: metricsHistory.subredditId })
 			.from(metricsHistory)
-			.where(gte(metricsHistory.recordedAt, startOfToday));
+			.where(gte(metricsHistory.recordedAt, cutoff));
 
-		const scrapedIds = new Set(alreadyScrapedToday.map((r) => r.subredditId));
+		const scrapedIds = new Set(recentScrapes.map((r) => r.subredditId));
 		const subs = allSubs.filter((sub) => !scrapedIds.has(sub.id));
 
 		const results: any[] = [];
@@ -224,16 +210,21 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				await delay(500);
 			}
 		}
+		const failedCount = results.filter(r => r.status === "failed").length;
+		const finalStatus = failedCount > 0 ? "failed" : "success";
+		const errorMessage = failedCount > 0 ? `${failedCount} subreddits failed to fetch.` : null;
+
 		await db
 			.update(cronLogs)
 			.set({
-				status: "success",
+				status: finalStatus,
+				errorMessage: errorMessage,
 				durationMs: Date.now() - startTime,
 			})
 			.where(eq(cronLogs.id, log.id));
 
 		return Response.json({
-			message: "Scraping cycle completed.",
+			message: finalStatus === "success" ? "Scraping cycle completed." : "Scraping cycle completed with some errors.",
 			results,
 		});
 	} catch (e: any) {

@@ -1,6 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { getAdminData } from "../functions/admin.functions";
+import { StatCard } from "../components/StatCard";
 
 export const Route = createFileRoute("/admin")({
 	loader: () => getAdminData(),
@@ -23,6 +25,46 @@ function AdminDashboard() {
 	const lastRunStatus = data.cronStats.lastRun?.status;
 	const isSuccess = lastRunStatus === "success";
 	const isRunning = lastRunStatus === "running";
+
+	const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>({ key: "data_points", direction: "desc" });
+
+	const sortedSubreddits = [...data.subreddits].sort((a: any, b: any) => {
+		if (!sortConfig) return 0;
+		const { key, direction } = sortConfig;
+		
+		let aVal = a[key];
+		let bVal = b[key];
+		
+		if (aVal === null || aVal === undefined) aVal = "";
+		if (bVal === null || bVal === undefined) bVal = "";
+
+		if (typeof aVal === "number" && typeof bVal === "number") {
+			return direction === "asc" ? aVal - bVal : bVal - aVal;
+		}
+
+		if (aVal < bVal) return direction === "asc" ? -1 : 1;
+		if (aVal > bVal) return direction === "asc" ? 1 : -1;
+		return 0;
+	});
+
+	const requestSort = (key: string) => {
+		let direction: "asc" | "desc" = "asc";
+		if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+			direction = "desc";
+		}
+		setSortConfig({ key, direction });
+	};
+
+	const SortIcon = ({ columnKey }: { columnKey: string }) => {
+		if (!sortConfig || sortConfig.key !== columnKey) {
+			return <ArrowUpDown className="w-3 h-3 ml-1 inline text-[#3B82F6]/50" />;
+		}
+		return sortConfig.direction === "asc" ? (
+			<ArrowUp className="w-3 h-3 ml-1 inline text-[#3B82F6]" />
+		) : (
+			<ArrowDown className="w-3 h-3 ml-1 inline text-[#3B82F6]" />
+		);
+	};
 
 	useEffect(() => {
 		let interval: ReturnType<typeof setInterval>;
@@ -51,90 +93,89 @@ function AdminDashboard() {
 
 			{/* KPI Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-				{/* DB Health */}
-				<div
-					className={`dash-card p-6 border-t-4 text-left transition-all hover:-translate-y-1 ${isHealthy ? "border-t-[#10B981]" : "border-t-[#EF4444]"}`}
-				>
-					<h3 className="dash-title flex items-center gap-2">
-						<span
-							className={`w-2.5 h-2.5 rounded-full ${isHealthy ? "bg-[#10B981]" : "bg-[#EF4444]"}`}
-						/>
-						Database Health
-					</h3>
-					<div
-						className={`mt-2 text-2xl font-bold tracking-tight ${isHealthy ? "text-[#10B981]" : "text-[#EF4444]"}`}
-					>
-						{data.dbHealth}
-					</div>
-					<p className="text-xs text-[#94A3B8] mt-2">
-						PostgreSQL Connection Status
-					</p>
-				</div>
+				<StatCard
+					title="Database Health"
+					value={data.dbHealth}
+					subtitle="PostgreSQL Connection Status"
+					iconColor={isHealthy ? "bg-[#10B981]" : "bg-[#EF4444]"}
+					borderColor={isHealthy ? "border-t-[#10B981]" : "border-t-[#EF4444]"}
+					textColor={isHealthy ? "text-[#10B981]" : "text-[#EF4444]"}
+				/>
 
-				{/* Total Cron Runs */}
-				<div className="dash-card p-6 border-t-4 border-t-[#3B82F6] text-left transition-all hover:-translate-y-1">
-					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
-						Total Scrapes
-					</h3>
-					<div className="mt-2 text-2xl font-bold text-white tracking-tight">
-						{data.cronStats.totalRuns}{" "}
-						<span className="text-sm font-normal text-[#94A3B8]">cycles</span>
-					</div>
-					<p className="text-xs text-[#94A3B8] mt-2">
-						Historical ScraperAPI Executions
-					</p>
-				</div>
+				<StatCard
+					title="Total Scrapes"
+					value={
+						<>
+							{data.cronStats.totalRuns}{" "}
+							<span className="text-sm font-normal text-[#94A3B8]">cycles</span>
+						</>
+					}
+					subtitle="Historical ScraperAPI Executions"
+					iconColor="bg-[#3B82F6]"
+					borderColor="border-t-[#3B82F6]"
+					textColor="text-white"
+				/>
 
-				{/* Last Run Status */}
-				<div
-					className={`dash-card p-6 border-t-4 text-left transition-all hover:-translate-y-1 ${isSuccess ? "border-t-[#10B981]" : isRunning ? "border-t-[#3B82F6]" : lastRunStatus ? "border-t-[#EF4444]" : "border-t-[#F59E0B]"}`}
-				>
-					<h3 className="dash-title flex items-center gap-2">
-						<span
-							className={`w-2.5 h-2.5 rounded-full ${isSuccess ? "bg-[#10B981]" : isRunning ? "bg-[#3B82F6] animate-pulse" : lastRunStatus ? "bg-[#EF4444]" : "bg-[#F59E0B]"}`}
-						/>
-						Last Execution
-					</h3>
-					<div
-						className={`mt-2 text-2xl font-bold tracking-tight ${isSuccess ? "text-[#10B981]" : isRunning ? "text-[#3B82F6]" : lastRunStatus ? "text-[#EF4444]" : "text-[#F59E0B]"}`}
-					>
-						{isSuccess
+				<StatCard
+					title="Last Execution"
+					value={
+						isSuccess
 							? "Success"
 							: isRunning
 								? "Running..."
 								: lastRunStatus
 									? "Failed"
-									: "Pending"}
-					</div>
-					<p
-						className="text-xs text-[#94A3B8] mt-2 truncate"
-						title={
-							data.cronStats.lastRun?.errorMessage ||
-							(isRunning ? "Executing..." : "Waiting for first run")
-						}
-					>
-						{data.cronStats.lastRun?.errorMessage ||
-							(data.cronStats.lastRun?.ranAt
-								? new Date(data.cronStats.lastRun.ranAt).toLocaleString()
-								: "Awaiting execution")}
-					</p>
-				</div>
+									: "Pending"
+					}
+					subtitle={
+						data.cronStats.lastRun?.errorMessage ||
+						(data.cronStats.lastRun?.ranAt
+							? new Date(data.cronStats.lastRun.ranAt).toLocaleString()
+							: "Awaiting execution")
+					}
+					iconColor={
+						isSuccess
+							? "bg-[#10B981]"
+							: isRunning
+								? "bg-[#3B82F6]"
+								: lastRunStatus
+									? "bg-[#EF4444]"
+									: "bg-[#F59E0B]"
+					}
+					borderColor={
+						isSuccess
+							? "border-t-[#10B981]"
+							: isRunning
+								? "border-t-[#3B82F6]"
+								: lastRunStatus
+									? "border-t-[#EF4444]"
+									: "border-t-[#F59E0B]"
+					}
+					textColor={
+						isSuccess
+							? "text-[#10B981]"
+							: isRunning
+								? "text-[#3B82F6]"
+								: lastRunStatus
+									? "text-[#EF4444]"
+									: "text-[#F59E0B]"
+					}
+					isPulse={isRunning}
+				/>
 
-				{/* Scrape Duration */}
-				<div className="dash-card p-6 border-t-4 border-t-[#8B5CF6] text-left transition-all hover:-translate-y-1">
-					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
-						Performance
-					</h3>
-					<div className="mt-2 text-2xl font-bold text-white tracking-tight">
-						{formatDuration(data.cronStats.avgDurationMs)}{" "}
-						<span className="text-sm font-normal text-[#94A3B8]">avg</span>
-					</div>
-					<p className="text-xs text-[#94A3B8] mt-2 truncate">
-						Last: {formatDuration(data.cronStats.lastRun?.durationMs)}
-					</p>
-				</div>
+				<StatCard
+					title="Performance"
+					value={
+						<>
+							{formatDuration(data.cronStats.avgDurationMs)}{" "}
+							<span className="text-sm font-normal text-[#94A3B8]">avg</span>
+						</>
+					}
+					subtitle={`Last: ${formatDuration(data.cronStats.lastRun?.durationMs)}`}
+					iconColor="bg-[#8B5CF6]"
+					borderColor="border-t-[#8B5CF6]"
+					textColor="text-white"
+				/>
 			</div>
 
 			{/* Subreddit Data Table */}
@@ -148,22 +189,46 @@ function AdminDashboard() {
 					<table className="w-full text-left border-collapse">
 						<thead>
 							<tr className="bg-[#0A1012] border-b border-[#1F3238]">
-								<th className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Subreddit
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("name")}
+								>
+									Subreddit <SortIcon columnKey="name" />
 								</th>
-								<th className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Category
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("category")}
+								>
+									Category <SortIcon columnKey="category" />
 								</th>
-								<th className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Data Points
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("latest_visitors")}
+								>
+									Active Visitors <SortIcon columnKey="latest_visitors" />
 								</th>
-								<th className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">
-									Last Updated
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("latest_contributions")}
+								>
+									Contributions <SortIcon columnKey="latest_contributions" />
+								</th>
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("data_points")}
+								>
+									Data Points <SortIcon columnKey="data_points" />
+								</th>
+								<th 
+									className="px-6 py-4 text-xs font-semibold text-[#94A3B8] uppercase tracking-wider cursor-pointer hover:bg-[#111C1F] transition-colors"
+									onClick={() => requestSort("last_updated")}
+								>
+									Last Updated <SortIcon columnKey="last_updated" />
 								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-[#1F3238]">
-							{data.subreddits.map((sub) => (
+							{sortedSubreddits.map((sub: any) => (
 								<tr
 									key={sub.id}
 									className="hover:bg-[#111C1F]/50 transition-colors"
@@ -173,6 +238,16 @@ function AdminDashboard() {
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-[#94A3B8]">
 										{sub.category}
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap text-sm">
+										<span className="font-medium text-[#E2E8F0]">
+											{sub.latest_visitors != null ? sub.latest_visitors.toLocaleString() : "—"}
+										</span>
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap text-sm">
+										<span className="font-medium text-[#E2E8F0]">
+											{sub.latest_contributions != null ? sub.latest_contributions.toLocaleString() : "—"}
+										</span>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm">
 										<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20">

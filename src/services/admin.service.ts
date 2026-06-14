@@ -20,17 +20,28 @@ export const getAdminStats = async () => {
 
 	// 2. Subreddit Stats
 	const subStats = await db.execute(sql`
+        WITH latest_metrics AS (
+            SELECT DISTINCT ON (subreddit_id)
+                subreddit_id,
+                weekly_visitors,
+                weekly_contributions
+            FROM metrics_history
+            ORDER BY subreddit_id, recorded_at DESC
+        )
         SELECT 
             s.id, 
             s.name, 
             COALESCE(STRING_AGG(DISTINCT tg.category, ', '), 'Uncategorized') as category,
             CAST(COUNT(DISTINCT m.id) AS INTEGER) as data_points, 
-            MAX(m.recorded_at) as last_updated
+            MAX(m.recorded_at) as last_updated,
+            lm.weekly_visitors as latest_visitors,
+            lm.weekly_contributions as latest_contributions
         FROM subreddits s
         LEFT JOIN metrics_history m ON s.id = m.subreddit_id
         LEFT JOIN subreddit_groups sg ON s.id = sg.subreddit_id
         LEFT JOIN tracking_groups tg ON sg.group_id = tg.id
-        GROUP BY s.id, s.name
+        LEFT JOIN latest_metrics lm ON s.id = lm.subreddit_id
+        GROUP BY s.id, s.name, lm.weekly_visitors, lm.weekly_contributions
         ORDER BY data_points DESC
     `);
 
