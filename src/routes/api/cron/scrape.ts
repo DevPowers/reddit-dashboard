@@ -12,7 +12,7 @@ import {
 	scraperKeys,
 } from "../../../db/schema";
 import { logger } from "../../../lib/logger";
-import { calculateAndSaveMacroMetrics } from "../../../functions/metrics.functions";
+import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
 
 export const scrapeHandler = async ({ request }: { request: Request }) => {
 	const CRON_SECRET = process.env.CRON_SECRET;
