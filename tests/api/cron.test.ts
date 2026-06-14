@@ -34,7 +34,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 	it('Scenario 1 - Fresh Run: Should insert data for all subreddits when no history exists', async () => {
 		console.log("Scenario 1 starting...");
-		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3');
 
@@ -72,7 +72,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 	}, 60000);
 
 	it('Scenario 2 - Partial Idempotency: Should skip subreddits that have been scraped recently within the wiggle room', async () => {
-		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3'); // Interval is 72 hours. Cutoff is 60 hours ago.
 
@@ -124,7 +124,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 	}, 60000);
 
 	it('Scenario 3 - Full Interval Bypass: Should perform 0 api calls if all subreddits were scraped 1 day ago', async () => {
-		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
+		vi.stubEnv('SCRAPER_API_KEY', 'fake_key');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '3'); // Cutoff 60 hours ago
 
@@ -157,7 +157,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 	}, 15000);
 
 	it('Scenario 4 - Key Rotation: Should rotate keys on fetch failure', async () => {
-		vi.stubEnv('SCRAPER_API_KEY_1', 'key_1_fail');
+		vi.stubEnv('SCRAPER_API_KEY', 'key_1_fail');
 		vi.stubEnv('SCRAPER_API_KEY_2', 'key_2_success');
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '0'); // Force scrape

@@ -26,7 +26,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 
 	// Extract available keys from env
 	const envKeys = [
-		process.env.SCRAPER_API_KEY_1,
+		process.env.SCRAPER_API_KEY_1 || process.env.SCRAPER_API_KEY,
 		process.env.SCRAPER_API_KEY_2,
 		process.env.SCRAPER_API_KEY_3,
 	].filter(Boolean) as string[];
@@ -50,13 +50,13 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		// --- 0. Key Rotation Logic ---
 		let keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
 		
-		// Seed if empty
-		if (keysInDb.length === 0) {
-			logger.info("Cron", "Seeding API keys into database.");
-			for (let i = 0; i < envKeys.length; i++) {
+		// Seed missing keys if env has more than DB
+		if (keysInDb.length < envKeys.length) {
+			logger.info("Cron", `Seeding new API keys into database. Env has ${envKeys.length}, DB has ${keysInDb.length}.`);
+			for (let i = keysInDb.length; i < envKeys.length; i++) {
 				await db.insert(scraperKeys).values({
 					keyIndex: i + 1,
-					isActive: i === 0, // Default to first key
+					isActive: keysInDb.length === 0 && i === 0, // Default to first key if totally empty
 				});
 			}
 			keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));

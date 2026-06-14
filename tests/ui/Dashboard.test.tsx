@@ -51,7 +51,7 @@ describe('Dashboard UI', () => {
     });
     
     // Verify Dashboard loads
-    expect(screen.getByText('Investor Performance Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Reddit Performance Dashboard')).toBeInTheDocument();
     
     // Verify KPI Cards are rendered (with new ARPU Titles)
     expect(screen.getByText('High ARPU')).toBeInTheDocument();
