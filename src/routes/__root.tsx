@@ -1,4 +1,6 @@
 import { createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 
 import appCss from "../styles.css?url";
 
@@ -68,6 +70,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					{children}
 				</main>
 				<Scripts />
+				<SpeedInsights />
+				<Analytics />
 			</body>
 		</html>
 	);
