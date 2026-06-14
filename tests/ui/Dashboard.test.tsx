@@ -9,6 +9,17 @@ vi.mock('../../src/db/index', () => ({
   db: { select: vi.fn() }
 }));
 
+// Mock recharts
+vi.mock('recharts', async () => {
+  const OriginalRechartsModule = await vi.importActual<any>('recharts');
+  return {
+    ...OriginalRechartsModule,
+    ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+    LineChart: ({ data, children }: any) => <div data-testid="mock-line-chart" data-chart-data={JSON.stringify(data)}>{children}</div>,
+    Line: ({ dataKey }: any) => <div data-testid={`mock-line-${dataKey}`} />
+  };
+});
+
 // Mock dependencies
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<any>();
@@ -77,5 +88,61 @@ describe('Dashboard UI', () => {
 
     // Verify the subreddit inside it renders
     expect(screen.getByText(`r/${dynamicSub}`)).toBeInTheDocument();
+  });
+
+  it('aggregates chart data by ARPU for Geography category', async () => {
+    await act(async () => {
+      render(<TestWrapper />);
+    });
+
+    // Toggle mock data to populate charts
+    const mockDataToggle = screen.getByLabelText(/use mock data/i);
+    await act(async () => {
+      fireEvent.click(mockDataToggle);
+    });
+
+    // We start on Geography category by default
+    // We expect the mocked chart lines to render High ARPU, Low ARPU, etc
+    const chart = await screen.findByTestId('mock-line-chart');
+    expect(chart).toBeInTheDocument();
+
+    const line1 = screen.queryByTestId('mock-line-High ARPU');
+    const line2 = screen.queryByTestId('mock-line-Low ARPU');
+    const line3 = screen.queryByTestId('mock-line-Medium ARPU');
+
+    expect(line1).toBeInTheDocument();
+    expect(line2).toBeInTheDocument();
+    expect(line3).toBeInTheDocument();
+
+    // Verify individual subreddits are NOT plotted as lines (e.g., r/nyc)
+    expect(screen.queryByTestId('mock-line-r/nyc')).not.toBeInTheDocument();
+    
+    // Switch to Advertiser Category
+    const advertiserBtn = screen.getByText('ADVERTISING PLATFORMS', { selector: 'button' });
+    await act(async () => {
+      fireEvent.click(advertiserBtn);
+    });
+
+    // It should now plot by subCategory (e.g. Meta, Reddit) instead of ARPU
+    expect(screen.queryByTestId('mock-line-High ARPU')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mock-line-Meta')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-line-Reddit')).toBeInTheDocument();
+
+    // The accordion should also have changed to show Meta and Reddit
+    expect(screen.getByText('Meta', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText('Reddit', { selector: 'span' })).toBeInTheDocument();
+
+    // Now let's click the "High ARPU" tier card
+    const highArpuBtn = screen.getByRole('button', { name: /High ARPU/i });
+
+    await act(async () => {
+      fireEvent.click(highArpuBtn);
+    });
+
+    // It should automatically switch back to Geography and filter chart lines to High ARPU ONLY
+    expect(screen.queryByTestId('mock-line-Meta')).not.toBeInTheDocument();
+    // Wait, if activeTier is set, the chartData might show "High ARPU" line because the category switched back to GEOGRAPHY.
+    // Let's verify the Accordion now shows High ARPU Geography categories (like United States or United Kingdom)
+    expect(screen.getByText('United States', { selector: 'span' })).toBeInTheDocument();
   });
 });

@@ -28,7 +28,7 @@ export function AccordionItem({
 			<button
 				type="button"
 				onClick={() => setIsOpen(!isOpen)}
-				className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#1F3238]/30 transition-all focus:outline-none"
+				className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#1F3238]/30 transition-all focus:outline-none cursor-pointer"
 			>
 				<div className="flex items-center gap-3">
 					<ChevronDown

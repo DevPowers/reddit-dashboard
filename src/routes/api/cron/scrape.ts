@@ -153,10 +153,22 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		}
 
 		if (expectedSubNames.size > 0) {
-			// Delete removed subreddits (this cascades to metrics and memberships)
-			await db
-				.delete(subreddits)
-				.where(notInArray(subreddits.name, Array.from(expectedSubNames)));
+			// Prune removed subreddits from active tracking groups (keeps historical data in subreddits table)
+			const trackedSubs = await db
+				.select({ id: subreddits.id })
+				.from(subreddits)
+				.where(inArray(subreddits.name, Array.from(expectedSubNames)));
+
+			if (trackedSubs.length > 0) {
+				await db
+					.delete(subredditGroups)
+					.where(
+						notInArray(
+							subredditGroups.subredditId,
+							trackedSubs.map((s) => s.id),
+						),
+					);
+			}
 		}
 
 		// --- 2. Fetch Sync'd Subs and Scrape ---

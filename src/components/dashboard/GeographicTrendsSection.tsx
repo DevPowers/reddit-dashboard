@@ -83,7 +83,7 @@ export function GeographicTrendsSection({
 								type="button"
 								key={cat}
 								onClick={() => setSelectedCategory(cat as Category)}
-								className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all border ${
+								className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all border cursor-pointer ${
 									selectedCategory === cat
 										? "bg-orangered text-white border-orangered shadow-[0_0_10px_rgba(255,69,0,0.3)]"
 										: "bg-obsidian-light text-text-muted border-obsidian-border hover:border-text-muted"

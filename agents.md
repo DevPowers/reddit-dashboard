@@ -190,3 +190,12 @@ export function RouteComponent() {
 - **Memoization Strictness**: Heavy data generation (like `generateMockMetrics`) or complex array mapping MUST be strictly wrapped in `useMemo` hooks with correct dependency arrays. Be extremely cautious about returning new object/array references that bypass downstream `useMemo` caches.
 - **Lookup Optimization**: Never use `Array.find()` or `Array.filter()` inside of loops (O(N²) complexity). Always transform the target array into a `Map` or `Set` first for instant O(1) lookups.
 - **Render Auditing**: When introducing new state (like category toggles or layout changes), ensure those states aren't needlessly causing the entire page data tree to re-evaluate.
+
+## Dashboard Chart & Accordion Data Grouping Logic
+- **chartData (Recharts)**: The line chart dynamically groups historical points differently depending on the active category.
+  - If `selectedCategory` is `GEOGRAPHY`: It aggregates and averages all subreddits into `High ARPU`, `Medium ARPU`, and `Low ARPU` lines.
+  - If `selectedCategory` is anything else (e.g., `ADVERTISING_PLATFORMS`, `HIGH_VALUE_AD_VERTICALS`): It aggregates and averages all subreddits into their `subCategory` lines (e.g. "Google", "Meta", "Gaming").
+- **accordionData**: The accordion table below the chart ALWAYS groups subreddits by their `subCategory` (e.g. "France", "Gaming") allowing users to expand the category to see the underlying subreddits making up that group.
+
+## Accessibility & UX Standards
+- **Cursor Pointer**: Explicitly add the `cursor-pointer` utility class to ALL clickable elements in the application (e.g. `<button>`, `<label>`, `<div onClick={...}>`). Do not assume that standard browser behaviors or Tailwind preflight handles this, as elements without `cursor-pointer` negatively impact perceived interactivity.

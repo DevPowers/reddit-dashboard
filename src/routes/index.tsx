@@ -42,6 +42,18 @@ function Dashboard() {
 		Category.GEOGRAPHY,
 	);
 
+	// Synchronize state: Category changes clear the tier filter
+	const handleCategoryChange = (cat: Category) => {
+		setSelectedCategory(cat);
+		setActiveTier(null); // Clear ARPU tier so accordion updates
+	};
+
+	// Synchronize state: Tier changes force category to GEOGRAPHY
+	const handleTierChange = (tier: "high" | "medium" | "low" | null) => {
+		setActiveTier(tier);
+		if (tier) setSelectedCategory(Category.GEOGRAPHY);
+	};
+
 	// Generate mock data only once
 	const mockData = useMemo(() => generateMockMetrics(), []);
 
@@ -172,11 +184,7 @@ function Dashboard() {
 
 	// Generate Chart Data for selected category (Time-series)
 	const chartData = useMemo(() => {
-		const filteredData = dataToUse.filter((d) => {
-			if (selectedCategory === Category.GEOGRAPHY)
-				return d.category === Category.GEOGRAPHY;
-			return d.category === Category.ADVERTISING_PLATFORMS;
-		});
+		const filteredData = dataToUse.filter((d) => d.category === selectedCategory);
 
 		// Optimize historicalData lookup
 		const histMap = new Map();
@@ -185,7 +193,7 @@ function Dashboard() {
 		}
 
 		// Group by date (ignoring time)
-		// For each date, map subCategory -> { sumGrowth: number, count: number }
+		// For each date, map lineName -> { sumGrowth: number, count: number }
 		const byDate = new Map<string, Map<string, { sumGrowth: number; count: number }>>();
 		const uniqueLines = new Set<string>();
 
@@ -194,11 +202,19 @@ function Dashboard() {
 			if (!byDate.has(dateStr)) byDate.set(dateStr, new Map());
 			
 			const mapForDate = byDate.get(dateStr)!;
-			const subCategory = row.subCategory;
-			uniqueLines.add(subCategory);
+			
+			let lineName: string;
+			if (selectedCategory === Category.GEOGRAPHY) {
+				const arpu = row.arpuExpectation;
+				lineName = arpu ? `${arpu.charAt(0).toUpperCase() + arpu.slice(1)} ARPU` : "Unknown ARPU";
+			} else {
+				lineName = row.subCategory;
+			}
+			
+			uniqueLines.add(lineName);
 
-			if (!mapForDate.has(subCategory)) {
-				mapForDate.set(subCategory, { sumGrowth: 0, count: 0 });
+			if (!mapForDate.has(lineName)) {
+				mapForDate.set(lineName, { sumGrowth: 0, count: 0 });
 			}
 
 			const hist = histMap.get(row.subredditId);
@@ -207,7 +223,7 @@ function Dashboard() {
 					((row.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) *
 					100;
 				
-				const stats = mapForDate.get(subCategory)!;
+				const stats = mapForDate.get(lineName)!;
 				stats.sumGrowth += growth;
 				stats.count += 1;
 			}
@@ -311,13 +327,13 @@ function Dashboard() {
 				portfolioMetrics={portfolioMetrics}
 				arpuAggregates={arpuAggregates}
 				activeTier={activeTier}
-				setActiveTier={setActiveTier}
+				setActiveTier={handleTierChange}
 			/>
 
 			<GeographicTrendsSection 
 				activeTier={activeTier}
 				selectedCategory={selectedCategory}
-				setSelectedCategory={setSelectedCategory}
+				setSelectedCategory={handleCategoryChange}
 				chartData={chartData}
 				colors={colors}
 			/>

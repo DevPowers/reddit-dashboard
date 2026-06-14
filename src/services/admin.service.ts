@@ -38,8 +38,8 @@ export const getAdminStats = async () => {
             lm.weekly_contributions as latest_contributions
         FROM subreddits s
         LEFT JOIN metrics_history m ON s.id = m.subreddit_id
-        LEFT JOIN subreddit_groups sg ON s.id = sg.subreddit_id
-        LEFT JOIN tracking_groups tg ON sg.group_id = tg.id
+        INNER JOIN subreddit_groups sg ON s.id = sg.subreddit_id
+        INNER JOIN tracking_groups tg ON sg.group_id = tg.id
         LEFT JOIN latest_metrics lm ON s.id = lm.subreddit_id
         GROUP BY s.id, s.name, lm.weekly_visitors, lm.weekly_contributions
         ORDER BY data_points DESC
