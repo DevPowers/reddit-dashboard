@@ -97,7 +97,7 @@ export function GeographicTrendsSection({
 
 				<div className="h-[450px] w-full">
 					{chartData.dataPoints.length > 0 ? (
-						<ResponsiveContainer width="100%" height="100%">
+						<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 							<LineChart
 								data={chartData.dataPoints}
 								margin={{ top: 5, right: 30, left: 20, bottom: 5 }}

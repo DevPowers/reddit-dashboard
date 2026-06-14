@@ -48,7 +48,7 @@ function SubredditPage() {
 			<div className="dash-card p-6 h-[500px]">
 				<h2 className="text-lg font-bold text-text-main mb-6">Historical Growth Metrics</h2>
 				{chartData.length > 0 ? (
-					<ResponsiveContainer width="100%" height="100%">
+					<ResponsiveContainer width="100%" height="100%" minWidth={0}>
 						<LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
 							<CartesianGrid strokeDasharray="3 3" stroke="#1F3238" vertical={false} />
 							<XAxis 
