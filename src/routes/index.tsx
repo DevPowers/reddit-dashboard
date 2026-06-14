@@ -347,7 +347,7 @@ function Dashboard() {
 			<div className="flex justify-between items-center mb-8">
 				<div>
 					<h1 className="text-3xl font-extrabold text-text-main tracking-tight">
-						Reddit Performance Dashboard
+						<span className="text-orangered font-black">Reddit</span> Performance Dashboard
 					</h1>
 					<p className="text-text-muted text-sm mt-1">
 						Time-series percentage growth measured against {baselineDateStr}.

@@ -11,6 +11,10 @@ async function seed() {
 
 	let insertedCount = 0;
 
+	// Clear out existing mappings to prevent stale/duplicate group associations
+	// if a subreddit is moved to a different category in subreddits.ts
+	await db.delete(subredditGroups);
+
 	// Insert logic with upsert to avoid duplicate key errors on name
 	for (const group of TARGET_SUBREDDITS) {
 		const [insertedGroup] = await db

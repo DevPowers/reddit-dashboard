@@ -59,7 +59,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<div className="flex h-14 items-center justify-between">
 							<div className="flex items-center gap-6">
 								<span className="font-bold text-white tracking-wider">
-									REDDIT<span className="text-orangered">INVESTOR</span>
+									<span className="text-orangered">REDDIT</span>INVESTOR
 								</span>
 								<nav className="flex gap-4">
 									<Link

@@ -43,17 +43,27 @@ function SubredditPage() {
 			className="min-h-[85vh] w-full cursor-pointer"
 			onClick={() => router.history.back()}
 		>
-			<div 
-				className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 cursor-default"
-				onClick={(e) => e.stopPropagation()}
-			>
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 			<div className="flex items-center justify-between">
 				<h1 className="text-3xl font-bold text-white tracking-tight">
 					r/<span className="text-orangered">{subreddit}</span>
 				</h1>
+				<button 
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						router.history.back();
+					}}
+					className="p-2 text-text-muted hover:text-white hover:bg-obsidian-light rounded-full transition-colors cursor-pointer"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+				</button>
 			</div>
 
-			<div className="dash-card p-6 h-[500px]">
+			<div 
+				className="dash-card p-6 h-[500px] cursor-default"
+				onClick={(e) => e.stopPropagation()}
+			>
 				<h2 className="text-lg font-bold text-text-main mb-6">Historical Growth Metrics</h2>
 				{chartData.length > 0 ? (
 					<ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
