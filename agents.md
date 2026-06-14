@@ -200,3 +200,8 @@ export function RouteComponent() {
 
 ## Accessibility & UX Standards
 - **Cursor Pointer**: Explicitly add the `cursor-pointer` utility class to ALL clickable elements in the application (e.g. `<button>`, `<label>`, `<div onClick={...}>`). Do not assume that standard browser behaviors or Tailwind preflight handles this, as elements without `cursor-pointer` negatively impact perceived interactivity.
+
+## TanStack Start Backend Isolation
+- **No Leaky Server Functions**: Standard, non-RPC server functions (e.g., standard async functions using `db` or Node-native modules like `Buffer`) MUST NOT be exported from files that are imported by client components (even if those files also contain `createServerFn` exports). 
+- **Dead Code Elimination Limits**: The TanStack bundler only guarantees dead code elimination for functions explicitly wrapped in `createServerFn`. If a non-RPC function is exported from an isomorphic file, its dependencies may leak into the client bundle and cause fatal browser crashes (`ReferenceError: Buffer is not defined`).
+- **Resolution**: Place any non-RPC server logic into strictly isolated `.server.ts` or distinct backend-only files (e.g., `src/functions/macro.ts`) that are never imported by the client.

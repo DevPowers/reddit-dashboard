@@ -6,6 +6,7 @@ import { SubredditTable } from "../components/admin/SubredditTable";
 
 export const Route = createFileRoute("/admin")({
 	loader: () => getAdminData(),
+	staleTime: 60_000,
 	component: AdminDashboard,
 });
 

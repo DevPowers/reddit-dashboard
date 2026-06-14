@@ -8,6 +8,7 @@ export interface MetricRow {
 	category: string;
 	subCategory: string;
 	monetizationWeight: number;
+	arpuMultiplier: number;
 	arpuExpectation: string;
 	population: number;
 	weeklyVisitors: number;
@@ -32,6 +33,7 @@ export function generateMockMetrics(): MetricRow[] {
 	const daysToGenerate = Math.max(1, totalDays);
 
 	TARGET_SUBREDDITS.forEach((group, _groupIdx) => {
+		if (group.category === Category.PERSONAL_TRACKING) return;
 		group.subreddits.forEach((subName, _subIdx) => {
 			// Base metrics logic
 			let baseVisitors = 50000;
@@ -71,6 +73,7 @@ export function generateMockMetrics(): MetricRow[] {
 					category: group.category,
 					subCategory: group.subCategory,
 					monetizationWeight: group.monetizationWeight || 1.0,
+					arpuMultiplier: group.arpuExpectation === "high" ? 1.5 : group.arpuExpectation === "low" ? 0.5 : 1.0,
 					arpuExpectation: group.arpuExpectation || "unknown",
 					population: group.population || 0,
 					weeklyVisitors: visitors,
@@ -82,4 +85,42 @@ export function generateMockMetrics(): MetricRow[] {
 	});
 
 	return mockData;
+}
+
+export function generateMockPlatformHistory() {
+	const history = [];
+	let idCounter = 1;
+	
+	const anchorDate = new Date("2026-03-31T00:00:00Z");
+	const now = new Date();
+	const totalDays = Math.ceil(
+		(now.getTime() - anchorDate.getTime()) / (1000 * 60 * 60 * 24),
+	);
+	const daysToGenerate = Math.max(1, totalDays);
+
+	let baseDau = 1200000;
+	let baseVelocity = 2.5;
+
+	for (let i = 0; i <= daysToGenerate; i++) {
+		const recordedAt = new Date(anchorDate);
+		recordedAt.setDate(anchorDate.getDate() + i);
+		if (recordedAt > now) break;
+
+		const trendFactor = 1 + i * 0.008;
+		const noise = i === 0 ? 1 : 0.95 + Math.random() * 0.1;
+		
+		const dau = Math.floor(baseDau * trendFactor * noise);
+		const velocity = Math.max(-10, Math.min(10, baseVelocity + (i * 0.1) * noise));
+
+		history.push({
+			id: idCounter++,
+			recordedAt: recordedAt.toISOString(),
+			overallDauEstimate: dau,
+			overallDauGrowthPercent: i * 0.8,
+			overallNetNewDau: dau - baseDau,
+			velocityIndexScore: velocity,
+		});
+	}
+
+	return history;
 }

@@ -22,6 +22,7 @@ export const Route = createFileRoute("/r/$subreddit")({
 function SubredditPage() {
 	const { subreddit } = Route.useParams();
 	const data = Route.useLoaderData();
+	const router = useRouter();
 
 	// Format data for Recharts (reverse to show chronological order left-to-right)
 	const chartData = useMemo(() => {
@@ -38,7 +39,14 @@ function SubredditPage() {
 	}, [data.metrics]);
 
 	return (
-		<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+		<div 
+			className="min-h-[85vh] w-full cursor-pointer"
+			onClick={() => router.history.back()}
+		>
+			<div 
+				className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 cursor-default"
+				onClick={(e) => e.stopPropagation()}
+			>
 			<div className="flex items-center justify-between">
 				<h1 className="text-3xl font-bold text-white tracking-tight">
 					r/<span className="text-orangered">{subreddit}</span>
@@ -48,8 +56,8 @@ function SubredditPage() {
 			<div className="dash-card p-6 h-[500px]">
 				<h2 className="text-lg font-bold text-text-main mb-6">Historical Growth Metrics</h2>
 				{chartData.length > 0 ? (
-					<ResponsiveContainer width="100%" height="100%" minWidth={0}>
-						<LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+					<ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+						<LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 30 }}>
 							<CartesianGrid strokeDasharray="3 3" stroke="#1F3238" vertical={false} />
 							<XAxis 
 								dataKey="date" 
@@ -87,7 +95,7 @@ function SubredditPage() {
 								name="Weekly Visitors"
 								stroke="#FF4500"
 								strokeWidth={3}
-								dot={{ fill: "#FF4500", strokeWidth: 2, r: 4 }}
+								dot={false}
 								activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
 							/>
 							<Line
@@ -97,7 +105,7 @@ function SubredditPage() {
 								name="Weekly Contributions"
 								stroke="#38BDF8"
 								strokeWidth={3}
-								dot={{ fill: "#38BDF8", strokeWidth: 2, r: 4 }}
+								dot={false}
 								activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
 							/>
 						</LineChart>
@@ -108,6 +116,7 @@ function SubredditPage() {
 					</div>
 				)}
 			</div>
+		</div>
 		</div>
 	);
 }

@@ -132,7 +132,8 @@ export const calculateAndSaveMacroMetrics = async () => {
 			: 0;
 	const overallNetNewDau = totalLatestDau - totalHistoricalDau;
 
-	const velocityIndexScore = totalWeightedVelocity / 100000;
+	const rawVelocityIndexScore = totalWeightedVelocity / 100000;
+	const velocityIndexScore = Math.max(-10, Math.min(10, rawVelocityIndexScore));
 
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)

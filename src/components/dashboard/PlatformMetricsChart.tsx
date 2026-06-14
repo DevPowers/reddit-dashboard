@@ -49,7 +49,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 			</div>
 
 			<div className="h-[350px] w-full">
-				<ResponsiveContainer width="100%" height="100%" minWidth={0}>
+				<ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
 					<LineChart
 						data={chartData}
 						margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -122,7 +122,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 							dataKey="DAU Estimate"
 							stroke="#6366F1"
 							strokeWidth={3}
-							dot={{ fill: "#6366F1", r: 4, strokeWidth: 0 }}
+							dot={false}
 							activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
 						/>
 						<Line
@@ -131,7 +131,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 							dataKey="Velocity Index"
 							stroke="#FF4500"
 							strokeWidth={3}
-							dot={{ fill: "#FF4500", r: 4, strokeWidth: 0 }}
+							dot={false}
 							activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
 						/>
 					</LineChart>

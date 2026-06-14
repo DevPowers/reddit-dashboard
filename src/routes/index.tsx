@@ -2,14 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
-import { generateMockMetrics } from "../lib/mockData";
+import { generateMockMetrics, generateMockPlatformHistory } from "../lib/mockData";
 import { ArpuExpectation, Category } from "../types";
 
 // Import Refactored View Components
 import { PortfolioMetricsSection } from "../components/dashboard/PortfolioMetricsSection";
 import { GeographicTrendsSection } from "../components/dashboard/GeographicTrendsSection";
 import { SubredditDetailSection } from "../components/dashboard/SubredditDetailSection";
-import { PlatformMetricsChart } from "../components/dashboard/PlatformMetricsChart";
 
 export const Route = createFileRoute("/")({
 	component: Dashboard,
@@ -20,6 +19,7 @@ export const Route = createFileRoute("/")({
 		]);
 		return { metrics, platformHistory };
 	},
+	staleTime: 60_000,
 });
 
 interface MetricData {
@@ -61,9 +61,11 @@ function Dashboard() {
 
 	// Generate mock data only once
 	const mockData = useMemo(() => generateMockMetrics(), []);
+	const mockHistory = useMemo(() => generateMockPlatformHistory(), []);
 
 	// Determine data source
 	const dataToUse: MetricData[] = useMockData ? mockData : serverData;
+	const historyToUse = useMockData ? mockHistory : platformHistory;
 
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
 	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
@@ -206,10 +208,13 @@ function Dashboard() {
 				: 0;
 		const overallNetNew = totalLatestDau - totalHistoricalDau;
 
+		const rawWeightedVelocity = totalWeightedVelocity / 100000;
+		const boundedWeightedVelocity = Math.max(-10, Math.min(10, rawWeightedVelocity));
+
 		return {
 			overallGrowthPercent,
 			overallNetNew,
-			weightedVelocity: totalWeightedVelocity,
+			weightedVelocity: boundedWeightedVelocity,
 		};
 	}, [latestData, historicalData, dataToUse]);
 
@@ -380,9 +385,8 @@ function Dashboard() {
 				arpuAggregates={arpuAggregates}
 				activeTier={activeTier}
 				setActiveTier={handleTierChange}
+				platformHistory={historyToUse}
 			/>
-
-			<PlatformMetricsChart data={platformHistory} />
 
 			<GeographicTrendsSection 
 				activeTier={activeTier}

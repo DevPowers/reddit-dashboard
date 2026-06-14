@@ -56,37 +56,37 @@ export function SubredditTable({ subreddits }: { subreddits: any[] }) {
 					<thead>
 						<tr className="bg-obsidian-light/50 border-b border-obsidian-border">
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("name")}
 							>
 								Subreddit <SortIcon columnKey="name" />
 							</th>
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("category")}
 							>
 								Category <SortIcon columnKey="category" />
 							</th>
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("latest_visitors")}
 							>
 								Active Visitors <SortIcon columnKey="latest_visitors" />
 							</th>
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("latest_contributions")}
 							>
 								Contributions <SortIcon columnKey="latest_contributions" />
 							</th>
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("data_points")}
 							>
 								Data Points <SortIcon columnKey="data_points" />
 							</th>
 							<th 
-								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors"
+								className="px-6 py-4 text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:bg-obsidian-light transition-colors whitespace-nowrap"
 								onClick={() => requestSort("last_updated")}
 							>
 								Last Updated <SortIcon columnKey="last_updated" />

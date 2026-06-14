@@ -78,7 +78,7 @@ export function GeographicTrendsSection({
 						Relative Growth Trajectory
 					</h2>
 					<div className="flex gap-2">
-						{Object.values(Category).map((cat) => (
+						{Object.values(Category).filter(c => c !== Category.PERSONAL_TRACKING).map((cat) => (
 							<button
 								type="button"
 								key={cat}

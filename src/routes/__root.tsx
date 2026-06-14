@@ -28,6 +28,22 @@ export const Route = createRootRoute({
 		],
 	}),
 	shellComponent: RootDocument,
+	notFoundComponent: () => {
+		return (
+			<div className="flex flex-col items-center justify-center min-h-[50vh] p-8">
+				<h1 className="text-4xl font-bold text-white mb-4">404 - Not Found</h1>
+				<p className="text-text-muted mb-6 text-lg text-center max-w-md">
+					The page you are looking for doesn't exist or has been moved.
+				</p>
+				<Link
+					to="/"
+					className="px-6 py-2 bg-obsidian-light hover:bg-obsidian-lighter border border-obsidian-border text-white rounded-md transition-colors cursor-pointer"
+				>
+					Return to Dashboard
+				</Link>
+			</div>
+		);
+	},
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -51,6 +67,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
 										activeProps={{ className: "text-white border-b-2 border-white" }}
 										activeOptions={{ exact: true }}
+										preload="render"
 									>
 										Dashboard
 									</Link>
@@ -58,6 +75,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 										to="/admin"
 										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
 										activeProps={{ className: "text-white border-b-2 border-white" }}
+										preload="render"
 									>
 										Admin
 									</Link>

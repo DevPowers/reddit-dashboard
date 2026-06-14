@@ -1,5 +1,26 @@
 import { getGrowthColorClass, formatGrowth } from "../../lib/utils";
 
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import {
+	CartesianGrid,
+	Line,
+	LineChart,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from "recharts";
+
+interface HistoricalMetric {
+	id: number;
+	recordedAt: Date | string;
+	overallDauEstimate: number;
+	overallDauGrowthPercent: number;
+	overallNetNewDau: number;
+	velocityIndexScore: number;
+}
+
 interface PortfolioMetricsSectionProps {
 	portfolioMetrics: {
 		overallGrowthPercent: number;
@@ -13,6 +34,7 @@ interface PortfolioMetricsSectionProps {
 	};
 	activeTier: "high" | "medium" | "low" | null;
 	setActiveTier: (tier: "high" | "medium" | "low" | null) => void;
+	platformHistory?: HistoricalMetric[];
 }
 
 export function PortfolioMetricsSection({
@@ -20,12 +42,32 @@ export function PortfolioMetricsSection({
 	arpuAggregates,
 	activeTier,
 	setActiveTier,
+	platformHistory = [],
 }: PortfolioMetricsSectionProps) {
+	const [openModal, setOpenModal] = useState<"dau" | "velocity" | null>(null);
+
+	const chartData = useMemo(() => {
+		if (!platformHistory) return [];
+		const sorted = [...platformHistory].sort(
+			(a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
+		);
+		return sorted.map((row) => ({
+			date: format(new Date(row.recordedAt), "MMM dd"),
+			"DAU Estimate": row.overallDauEstimate,
+			"Percent Growth": Number(row.overallDauGrowthPercent.toFixed(2)),
+			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
+		}));
+	}, [platformHistory]);
+
 	return (
 		<>
 			{/* Hero KPI: Overall Portfolio Metrics */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-				<div className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative overflow-hidden group">
+				<button 
+					type="button"
+					onClick={() => setOpenModal("dau")}
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative overflow-hidden group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+				>
 					<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
 						Overall DAU Estimated Growth
@@ -44,9 +86,13 @@ export function PortfolioMetricsSection({
 						</span>{" "}
 						net new daily active users
 					</div>
-				</div>
+				</button>
 
-				<div className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative overflow-hidden group">
+				<button
+					type="button"
+					onClick={() => setOpenModal("velocity")}
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative overflow-hidden group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+				>
 					<div className="absolute top-0 right-0 w-32 h-32 bg-[#6366F1]/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
 						DAU ARPU Velocity (Weighted)
@@ -56,14 +102,14 @@ export function PortfolioMetricsSection({
 							className={`text-5xl font-extrabold tracking-tight ${portfolioMetrics.weightedVelocity > 0 ? "text-success" : "text-danger"}`}
 						>
 							{portfolioMetrics.weightedVelocity > 0 ? "+" : ""}
-							{(portfolioMetrics.weightedVelocity / 100000).toFixed(1)}
+							{portfolioMetrics.weightedVelocity.toFixed(1)}
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
 						Normalized Revenue Momentum Score
 					</div>
-				</div>
+				</button>
 			</div>
 
 			{/* Tier 1: Aggregate ARPU KPI Cards */}
@@ -121,6 +167,90 @@ export function PortfolioMetricsSection({
 					<p className="text-xs text-text-muted mt-1">Average Growth vs Q1</p>
 				</button>
 			</div>
+
+			{/* Modal Overlay */}
+			{openModal && (
+				<div 
+					className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+					onClick={() => setOpenModal(null)}
+				>
+					<div 
+						className="bg-obsidian w-full max-w-3xl rounded-xl border border-obsidian-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div className="flex items-center justify-between p-6 border-b border-obsidian-border bg-obsidian-light">
+							<h3 className="text-xl font-bold text-white">
+								{openModal === "dau" ? "Overall DAU Growth Trend" : "DAU ARPU Velocity Trend"}
+							</h3>
+							<button 
+								onClick={() => setOpenModal(null)}
+								className="text-text-muted hover:text-white transition-colors cursor-pointer"
+								aria-label="Close modal"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+							</button>
+						</div>
+						<div className="p-6 h-[400px]">
+							{chartData.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+									<LineChart
+										data={chartData}
+										margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+									>
+										<CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
+										<XAxis dataKey="date" stroke="#666" tick={{ fill: "#888", fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
+										<YAxis 
+											yAxisId="left"
+											stroke={openModal === "dau" ? "#FF4500" : "#6366F1"} 
+											tick={{ fill: openModal === "dau" ? "#FF4500" : "#6366F1", fontSize: 12 }} 
+											tickFormatter={(value) => openModal === "dau" ? `${(value / 1000).toFixed(0)}k` : value.toFixed(1)}
+											tickMargin={10} axisLine={false} tickLine={false} 
+										/>
+										{openModal === "dau" && (
+											<YAxis 
+												yAxisId="right"
+												orientation="right"
+												stroke="#10B981" 
+												tick={{ fill: "#10B981", fontSize: 12 }} 
+												tickFormatter={(value) => `${value}%`}
+												tickMargin={10} axisLine={false} tickLine={false} 
+											/>
+										)}
+										<Tooltip
+											contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #333", borderRadius: "8px", color: "#fff" }}
+											itemStyle={{ color: "#fff" }}
+										/>
+										<Line
+											yAxisId="left"
+											type="monotone"
+											dataKey={openModal === "dau" ? "DAU Estimate" : "Velocity Index"}
+											stroke={openModal === "dau" ? "#FF4500" : "#6366F1"}
+											strokeWidth={3}
+											dot={false}
+											activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
+										/>
+										{openModal === "dau" && (
+											<Line
+												yAxisId="right"
+												type="monotone"
+												dataKey="Percent Growth"
+												stroke="#10B981"
+												strokeWidth={3}
+												dot={false}
+												activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
+											/>
+										)}
+									</LineChart>
+								</ResponsiveContainer>
+							) : (
+								<div className="w-full h-full flex items-center justify-center text-text-muted">
+									No historical data available yet.
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			)}
 		</>
 	);
 }
