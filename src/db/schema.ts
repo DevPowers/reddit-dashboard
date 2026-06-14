@@ -106,3 +106,14 @@ export const scraperKeys = pgTable("scraper_keys", {
 	lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
 	lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
 });
+
+export const platformHistoricalMetrics = pgTable("platform_historical_metrics", {
+	id: serial("id").primaryKey(),
+	recordedAt: timestamp("recorded_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+	overallDauEstimate: integer("overall_dau_estimate").notNull(),
+	overallDauGrowthPercent: real("overall_dau_growth_percent").notNull().default(0),
+	overallNetNewDau: integer("overall_net_new_dau").notNull().default(0),
+	velocityIndexScore: real("velocity_index_score").notNull(),
+});

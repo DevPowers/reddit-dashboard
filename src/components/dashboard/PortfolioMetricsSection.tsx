@@ -56,12 +56,12 @@ export function PortfolioMetricsSection({
 							className={`text-5xl font-extrabold tracking-tight ${portfolioMetrics.weightedVelocity > 0 ? "text-success" : "text-danger"}`}
 						>
 							{portfolioMetrics.weightedVelocity > 0 ? "+" : ""}
-							{(portfolioMetrics.weightedVelocity / 1000000).toFixed(2)}M
+							{(portfolioMetrics.weightedVelocity / 100000).toFixed(1)}
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
-						Weighted aggregate DAU factoring monetization scale
+						Normalized Revenue Momentum Score
 					</div>
 				</div>
 			</div>

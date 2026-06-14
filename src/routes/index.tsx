@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
-import { getMetrics } from "../functions/metrics.functions";
+import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
 import { generateMockMetrics } from "../lib/mockData";
 import { ArpuExpectation, Category } from "../types";
 
@@ -9,11 +9,16 @@ import { ArpuExpectation, Category } from "../types";
 import { PortfolioMetricsSection } from "../components/dashboard/PortfolioMetricsSection";
 import { GeographicTrendsSection } from "../components/dashboard/GeographicTrendsSection";
 import { SubredditDetailSection } from "../components/dashboard/SubredditDetailSection";
+import { PlatformMetricsChart } from "../components/dashboard/PlatformMetricsChart";
 
 export const Route = createFileRoute("/")({
 	component: Dashboard,
 	loader: async () => {
-		return await getMetrics();
+		const [metrics, platformHistory] = await Promise.all([
+			getMetrics(),
+			getPlatformHistory()
+		]);
+		return { metrics, platformHistory };
 	},
 });
 
@@ -33,7 +38,7 @@ interface MetricData {
 }
 
 function Dashboard() {
-	const serverData = Route.useLoaderData();
+	const { metrics: serverData, platformHistory } = Route.useLoaderData();
 	const [useMockData, setUseMockData] = useState(false);
 	const [activeTier, setActiveTier] = useState<
 		"high" | "medium" | "low" | null
@@ -376,6 +381,8 @@ function Dashboard() {
 				activeTier={activeTier}
 				setActiveTier={handleTierChange}
 			/>
+
+			<PlatformMetricsChart data={platformHistory} />
 
 			<GeographicTrendsSection 
 				activeTier={activeTier}

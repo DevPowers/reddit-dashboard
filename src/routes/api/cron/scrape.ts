@@ -12,6 +12,7 @@ import {
 	scraperKeys,
 } from "../../../db/schema";
 import { logger } from "../../../lib/logger";
+import { calculateAndSaveMacroMetrics } from "../../../functions/metrics.functions";
 
 export const scrapeHandler = async ({ request }: { request: Request }) => {
 	const CRON_SECRET = process.env.CRON_SECRET;
@@ -304,6 +305,15 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				durationMs: Date.now() - startTime,
 			})
 			.where(eq(cronLogs.id, log.id));
+
+		if (finalStatus === "success") {
+			try {
+				await calculateAndSaveMacroMetrics();
+				logger.info("Cron", "Macro metrics calculated and saved.");
+			} catch (macroErr: any) {
+				logger.error("Cron", "Failed to calculate macro metrics", macroErr);
+			}
+		}
 
 		return Response.json({
 			message: finalStatus === "success" ? "Scraping cycle completed." : "Scraping cycle completed with some errors.",
