@@ -108,7 +108,7 @@ export function SubredditTable({ subreddits }: { subreddits: any[] }) {
 									</div>
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
-									{sub.category}
+									{sub.category ? sub.category.replace(/_/g, " ").replace(/\b\w/g, (char: string) => char.toUpperCase()) : "—"}
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap text-sm">
 									<span className="font-medium text-text-main">
