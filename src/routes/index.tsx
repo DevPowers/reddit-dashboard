@@ -185,33 +185,42 @@ function Dashboard() {
 		}
 
 		// Group by date (ignoring time)
-		const byDate = new Map<string, Record<string, number>>();
+		// For each date, map subCategory -> { sumGrowth: number, count: number }
+		const byDate = new Map<string, Map<string, { sumGrowth: number; count: number }>>();
 		const uniqueLines = new Set<string>();
 
 		for (const row of filteredData) {
 			const dateStr = format(new Date(row.recordedAt), "MMM dd");
-			if (!byDate.has(dateStr)) byDate.set(dateStr, {});
+			if (!byDate.has(dateStr)) byDate.set(dateStr, new Map());
 			
 			const mapForDate = byDate.get(dateStr)!;
-			const subName = `r/${row.name}`;
-			uniqueLines.add(subName);
+			const subCategory = row.subCategory;
+			uniqueLines.add(subCategory);
+
+			if (!mapForDate.has(subCategory)) {
+				mapForDate.set(subCategory, { sumGrowth: 0, count: 0 });
+			}
 
 			const hist = histMap.get(row.subredditId);
 			if (hist && hist.weeklyVisitors > 0) {
 				const growth =
 					((row.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) *
 					100;
-				mapForDate[subName] = Number(growth.toFixed(2));
-			} else {
-				mapForDate[subName] = 0;
+				
+				const stats = mapForDate.get(subCategory)!;
+				stats.sumGrowth += growth;
+				stats.count += 1;
 			}
 		}
 
 		const dataPoints = Array.from(byDate.entries())
-			.map(([date, values]) => ({
-				date,
-				...values,
-			}))
+			.map(([date, categoryMap]) => {
+				const point: any = { date };
+				for (const [subCat, stats] of categoryMap.entries()) {
+					point[subCat] = stats.count > 0 ? Number((stats.sumGrowth / stats.count).toFixed(2)) : 0;
+				}
+				return point;
+			})
 			.sort(
 				(a, b) =>
 					new Date(`${a.date} 2026`).getTime() -
