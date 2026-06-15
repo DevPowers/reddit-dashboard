@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
 import { generateMockMetrics, generateMockPlatformHistory } from "../lib/mockData";
 import { ArpuExpectation, Category } from "../types";
+import {
+	getQuarterEndBaseline,
+	calculateSubVelocity,
+	normalizeVelocityScore,
+	findClosestToDate,
+} from "../lib/calculations";
 
 // Import Refactored View Components
 import { PortfolioMetricsSection } from "../components/dashboard/PortfolioMetricsSection";
@@ -29,6 +35,7 @@ interface MetricData {
 	category: string;
 	subCategory: string;
 	monetizationWeight: number;
+	arpuMultiplier: number;
 	arpuExpectation: string | null;
 	population: number | null;
 	weeklyVisitors: number;
@@ -72,16 +79,7 @@ function Dashboard() {
 		const latestMap = new Map<number, MetricData>();
 		const historicalMap = new Map<number, MetricData>();
 
-		// Dynamically determine most recent quarter end date
-		const today = new Date();
-		const year = today.getFullYear();
-		const month = today.getMonth(); // 0-11
-		
-		let T0_DATE: Date;
-		if (month >= 3 && month < 6) T0_DATE = new Date(`${year}-03-31T00:00:00Z`);
-		else if (month >= 6 && month < 9) T0_DATE = new Date(`${year}-06-30T00:00:00Z`);
-		else if (month >= 9 && month < 12) T0_DATE = new Date(`${year}-09-30T00:00:00Z`);
-		else T0_DATE = new Date(`${year - 1}-12-31T00:00:00Z`);
+		const T0_DATE = getQuarterEndBaseline(new Date());
 
 		for (const row of dataToUse) {
 			const recordedAtDate = new Date(row.recordedAt);
@@ -160,46 +158,52 @@ function Dashboard() {
 		let totalLatestDau = 0;
 		let totalHistoricalDau = 0;
 		let totalWeightedVelocity = 0;
+		let velocityContributorCount = 0;
 
 		const targetDate = new Date();
 		targetDate.setDate(targetDate.getDate() - 28);
-		const targetTime = targetDate.getTime();
+
+		// O(1) lookup map for historical data (fixes Array.find in loop)
+		const histLookup = new Map<number, MetricData>();
+		for (const h of historicalData) {
+			histLookup.set(h.subredditId, h);
+		}
+
+		// Pre-group data by subredditId (fixes filter/sort in loop)
+		const dataBySubreddit = new Map<number, MetricData[]>();
+		for (const d of dataToUse) {
+			if (!dataBySubreddit.has(d.subredditId)) {
+				dataBySubreddit.set(d.subredditId, []);
+			}
+			dataBySubreddit.get(d.subredditId)!.push(d);
+		}
 
 		for (const sub of latestData) {
-			// Proxy weekly visitors to roughly DAU for headcount metric
 			const estDau = Math.floor(sub.weeklyVisitors / 7);
 			totalLatestDau += estDau;
 
-			const hist = historicalData.find((h) => h.subredditId === sub.subredditId);
-			let histDau = 0;
+			const hist = histLookup.get(sub.subredditId);
 			if (hist) {
-				histDau = Math.floor(hist.weeklyVisitors / 7);
+				const histDau = Math.floor(hist.weeklyVisitors / 7);
 				totalHistoricalDau += histDau;
 			}
 
-			// Monetizable Velocity Index: (Latest WAU - Rolling 28-Day Baseline WAU) * arpuMultiplier * monetizationWeight
-			const subHistory = dataToUse
-				.filter((d) => d.subredditId === sub.subredditId)
+			// Use pre-grouped data instead of filtering entire dataset
+			const subHistory = (dataBySubreddit.get(sub.subredditId) || [])
 				.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
 
-			let baselineWau = sub.weeklyVisitors;
-			if (subHistory.length > 0) {
-				// Find closest to 28 days ago, or oldest if less than 28 days
-				let bestMatch = subHistory[0];
-				let smallestDiff = Math.abs(new Date(bestMatch.recordedAt).getTime() - targetTime);
+			const baselinePoint = findClosestToDate(subHistory, targetDate);
+			const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
 
-				for (const point of subHistory) {
-					const diff = Math.abs(new Date(point.recordedAt).getTime() - targetTime);
-					if (diff < smallestDiff) {
-						smallestDiff = diff;
-						bestMatch = point;
-					}
-				}
-				baselineWau = bestMatch.weeklyVisitors;
-			}
-
-			const velocity = (sub.weeklyVisitors - baselineWau) * sub.arpuMultiplier * sub.monetizationWeight;
+			// Percentage-based velocity
+			const velocity = calculateSubVelocity(
+				sub.weeklyVisitors,
+				baselineWau,
+				sub.arpuMultiplier,
+				sub.monetizationWeight,
+			);
 			totalWeightedVelocity += velocity;
+			velocityContributorCount++;
 		}
 
 		const overallGrowthPercent =
@@ -208,13 +212,16 @@ function Dashboard() {
 				: 0;
 		const overallNetNew = totalLatestDau - totalHistoricalDau;
 
-		const rawWeightedVelocity = totalWeightedVelocity / 100000;
-		const boundedWeightedVelocity = Math.max(-10, Math.min(10, rawWeightedVelocity));
+		// Dynamic normalization instead of magic /100000 constant
+		const weightedVelocity = normalizeVelocityScore(
+			totalWeightedVelocity,
+			velocityContributorCount,
+		);
 
 		return {
 			overallGrowthPercent,
 			overallNetNew,
-			weightedVelocity: boundedWeightedVelocity,
+			weightedVelocity,
 		};
 	}, [latestData, historicalData, dataToUse]);
 
@@ -249,17 +256,21 @@ function Dashboard() {
 			histMap.set(h.subredditId, h);
 		}
 
-		// Group by date (ignoring time)
-		// For each date, map lineName -> { sumGrowth: number, count: number }
-		const byDate = new Map<string, Map<string, { sumGrowth: number; count: number }>>();
+		// Group by date with a numeric sort key for proper ordering
+		const byDate = new Map<string, { sortKey: number; categories: Map<string, { sumGrowth: number; count: number }> }>();
 		const uniqueLines = new Set<string>();
 
 		for (const row of filteredData) {
-			const dateStr = format(new Date(row.recordedAt), "MMM dd");
-			if (!byDate.has(dateStr)) byDate.set(dateStr, new Map());
-			
-			const mapForDate = byDate.get(dateStr)!;
-			
+			const recordedDate = new Date(row.recordedAt);
+			const dateStr = format(recordedDate, "MMM dd");
+			if (!byDate.has(dateStr)) {
+				byDate.set(dateStr, { sortKey: recordedDate.getTime(), categories: new Map() });
+			}
+
+			const entry = byDate.get(dateStr)!;
+			// Use earliest timestamp for this date as the sort key
+			entry.sortKey = Math.min(entry.sortKey, recordedDate.getTime());
+
 			let lineName: string;
 			if (selectedCategory === Category.GEOGRAPHY) {
 				const arpu = row.arpuExpectation;
@@ -267,11 +278,11 @@ function Dashboard() {
 			} else {
 				lineName = row.subCategory;
 			}
-			
+
 			uniqueLines.add(lineName);
 
-			if (!mapForDate.has(lineName)) {
-				mapForDate.set(lineName, { sumGrowth: 0, count: 0 });
+			if (!entry.categories.has(lineName)) {
+				entry.categories.set(lineName, { sumGrowth: 0, count: 0 });
 			}
 
 			const hist = histMap.get(row.subredditId);
@@ -279,26 +290,22 @@ function Dashboard() {
 				const growth =
 					((row.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) *
 					100;
-				
-				const stats = mapForDate.get(lineName)!;
+
+				const stats = entry.categories.get(lineName)!;
 				stats.sumGrowth += growth;
 				stats.count += 1;
 			}
 		}
 
 		const dataPoints = Array.from(byDate.entries())
-			.map(([date, categoryMap]) => {
+			.sort(([, a], [, b]) => a.sortKey - b.sortKey)
+			.map(([date, { categories }]) => {
 				const point: any = { date };
-				for (const [subCat, stats] of categoryMap.entries()) {
+				for (const [subCat, stats] of categories.entries()) {
 					point[subCat] = stats.count > 0 ? Number((stats.sumGrowth / stats.count).toFixed(2)) : 0;
 				}
 				return point;
-			})
-			.sort(
-				(a, b) =>
-					new Date(`${a.date} 2026`).getTime() -
-					new Date(`${b.date} 2026`).getTime(),
-			);
+			});
 
 		return {
 			dataPoints,

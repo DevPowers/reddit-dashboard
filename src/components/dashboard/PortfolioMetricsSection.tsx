@@ -1,4 +1,5 @@
 import { getGrowthColorClass, formatGrowth } from "../../lib/utils";
+import { Info } from "lucide-react";
 
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
@@ -37,6 +38,15 @@ interface PortfolioMetricsSectionProps {
 	platformHistory?: HistoricalMetric[];
 }
 
+const getVelocityColorClass = (velocity: number) => {
+	if (velocity >= 8) return "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"; // Exceptional
+	if (velocity >= 4) return "text-emerald-500 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"; // Strong
+	if (velocity > 0) return "text-success"; // Modest
+	if (velocity === 0) return "text-text-muted"; // Flat
+	if (velocity > -4) return "text-red-400"; // Modest Decline
+	return "text-danger"; // Severe Decline
+};
+
 export function PortfolioMetricsSection({
 	portfolioMetrics,
 	arpuAggregates,
@@ -53,7 +63,7 @@ export function PortfolioMetricsSection({
 		);
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"DAU Estimate": row.overallDauEstimate,
+			"Engagement Index": row.overallDauEstimate,
 			"Percent Growth": Number(row.overallDauGrowthPercent.toFixed(2)),
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
@@ -70,7 +80,7 @@ export function PortfolioMetricsSection({
 				>
 					<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Overall DAU Estimated Growth
+						Engagement Index Growth
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -82,9 +92,9 @@ export function PortfolioMetricsSection({
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-success" />
 						<span className="text-text-main font-medium">
-							+{portfolioMetrics.overallNetNew.toLocaleString()}
+							{portfolioMetrics.overallNetNew > 0 ? "+" : ""}{portfolioMetrics.overallNetNew.toLocaleString()}
 						</span>{" "}
-						net new daily active users
+						net new estimated daily reach
 					</div>
 				</button>
 
@@ -94,12 +104,16 @@ export function PortfolioMetricsSection({
 					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative overflow-hidden group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute top-0 right-0 w-32 h-32 bg-[#6366F1]/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
-					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						DAU ARPU Velocity (Weighted)
+					<h3 
+						className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5"
+						title="Scale: -10 to 10.&#10;0 = Flat Growth&#10;1 to 3 = Modest Growth (2-3% avg)&#10;4 to 7 = Strong Growth (4-8% avg)&#10;8 to 10 = Exceptional Growth (10%+ avg)&#10;Velocity is heavily weighted by ARPU potential."
+					>
+						ARPU Velocity Index
+						<Info size={14} className="text-text-muted opacity-70" />
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
-							className={`text-5xl font-extrabold tracking-tight ${portfolioMetrics.weightedVelocity > 0 ? "text-success" : "text-danger"}`}
+							className={`text-5xl font-extrabold tracking-tight transition-colors duration-300 ${getVelocityColorClass(portfolioMetrics.weightedVelocity)}`}
 						>
 							{portfolioMetrics.weightedVelocity > 0 ? "+" : ""}
 							{portfolioMetrics.weightedVelocity.toFixed(1)}
@@ -180,7 +194,7 @@ export function PortfolioMetricsSection({
 					>
 						<div className="flex items-center justify-between p-6 border-b border-obsidian-border bg-obsidian-light">
 							<h3 className="text-xl font-bold text-white">
-								{openModal === "dau" ? "Overall DAU Growth Trend" : "DAU ARPU Velocity Trend"}
+								{openModal === "dau" ? "Engagement Index Trend" : "ARPU Velocity Trend"}
 							</h3>
 							<button 
 								onClick={() => setOpenModal(null)}
@@ -223,7 +237,7 @@ export function PortfolioMetricsSection({
 										<Line
 											yAxisId="left"
 											type="monotone"
-											dataKey={openModal === "dau" ? "DAU Estimate" : "Velocity Index"}
+											dataKey={openModal === "dau" ? "Engagement Index" : "Velocity Index"}
 											stroke={openModal === "dau" ? "#FF4500" : "#6366F1"}
 											strokeWidth={3}
 											dot={false}

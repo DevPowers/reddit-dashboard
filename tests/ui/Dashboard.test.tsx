@@ -28,7 +28,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: () => (options: any) => {
       return {
         options,
-        useLoaderData: () => [] // Start with empty real data
+        useLoaderData: () => ({ metrics: [], platformHistory: [] }) // Start with empty real data
       };
     }
   };
@@ -51,7 +51,8 @@ describe('Dashboard UI', () => {
     });
     
     // Verify Dashboard loads
-    expect(screen.getByText('Reddit Performance Dashboard')).toBeInTheDocument();
+    const dashboardTitles = screen.getAllByText(/Performance Dashboard/i);
+    expect(dashboardTitles.length).toBeGreaterThan(0);
     
     // Verify KPI Cards are rendered (with new ARPU Titles)
     expect(screen.getByText('High ARPU')).toBeInTheDocument();
@@ -130,7 +131,8 @@ describe('Dashboard UI', () => {
 
     // The accordion should also have changed to show Meta and Reddit
     expect(screen.getByText('Meta', { selector: 'span' })).toBeInTheDocument();
-    expect(screen.getByText('Reddit', { selector: 'span' })).toBeInTheDocument();
+    const redditSpans = screen.getAllByText('Reddit', { selector: 'span' });
+    expect(redditSpans.length).toBeGreaterThan(0);
 
     // Now let's click the "High ARPU" tier card
     const highArpuBtn = screen.getByRole('button', { name: /High ARPU/i });

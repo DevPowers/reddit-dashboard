@@ -73,7 +73,7 @@ export function generateMockMetrics(): MetricRow[] {
 					category: group.category,
 					subCategory: group.subCategory,
 					monetizationWeight: group.monetizationWeight || 1.0,
-					arpuMultiplier: group.arpuExpectation === "high" ? 1.5 : group.arpuExpectation === "low" ? 0.5 : 1.0,
+					arpuMultiplier: group.arpuMultiplier,
 					arpuExpectation: group.arpuExpectation || "unknown",
 					population: group.population || 0,
 					weeklyVisitors: visitors,

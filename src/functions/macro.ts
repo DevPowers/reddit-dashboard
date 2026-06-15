@@ -8,6 +8,12 @@ import {
 	platformHistoricalMetrics,
 } from "../db/schema";
 import { eq, ne } from "drizzle-orm";
+import {
+	getQuarterEndBaseline,
+	calculateSubVelocity,
+	normalizeVelocityScore,
+	findClosestToDate,
+} from "../lib/calculations";
 
 export const calculateAndSaveMacroMetrics = async () => {
 	const data = await db
@@ -30,7 +36,16 @@ export const calculateAndSaveMacroMetrics = async () => {
 		)
 		.where(ne(trackingGroups.category, Category.PERSONAL_TRACKING));
 
-	// 1. Group by Subreddit to find the latest data
+	// Pre-group all data by subredditId for O(1) lookups (fixes O(N²) filter/sort inside loop)
+	const dataBySubreddit = new Map<number, typeof data>();
+	for (const row of data) {
+		if (!dataBySubreddit.has(row.subredditId)) {
+			dataBySubreddit.set(row.subredditId, []);
+		}
+		dataBySubreddit.get(row.subredditId)!.push(row);
+	}
+
+	// 1. Find the latest data point per subreddit
 	const latestMap = new Map<number, typeof data[0]>();
 	for (const row of data) {
 		const existing = latestMap.get(row.subredditId);
@@ -40,17 +55,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 	const latestData = Array.from(latestMap.values());
 
-	// 1.5. Find historical baseline data
+	// 1.5. Find historical baseline data using shared quarter-end calculation
+	const T0_DATE = getQuarterEndBaseline(new Date());
 	const historicalMap = new Map<number, typeof data[0]>();
-	const today = new Date();
-	const year = today.getFullYear();
-	const month = today.getMonth(); // 0-11
-	
-	let T0_DATE: Date;
-	if (month >= 3 && month < 6) T0_DATE = new Date(`${year}-03-31T00:00:00Z`);
-	else if (month >= 6 && month < 9) T0_DATE = new Date(`${year}-06-30T00:00:00Z`);
-	else if (month >= 9 && month < 12) T0_DATE = new Date(`${year}-09-30T00:00:00Z`);
-	else T0_DATE = new Date(`${year - 1}-12-31T00:00:00Z`);
 
 	for (const row of data) {
 		const recordedAtDate = new Date(row.recordedAt);
@@ -65,6 +72,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 		}
 	}
 
+	// Fallback: if no data before T0, use earliest record per subreddit
 	if (historicalMap.size === 0 && data.length > 0) {
 		const earliestPerSub = new Map<number, typeof data[0]>();
 		for (const row of data) {
@@ -80,50 +88,44 @@ export const calculateAndSaveMacroMetrics = async () => {
 			historicalMap.set(subId, row);
 		}
 	}
-	const historicalData = Array.from(historicalMap.values());
 
-	// 2. Setup 28-day window target
+	// 2. Setup 28-day window target for velocity baseline
 	const targetDate = new Date();
 	targetDate.setDate(targetDate.getDate() - 28);
-	const targetTime = targetDate.getTime();
 
 	// 3. Aggregate
 	let totalLatestDau = 0;
 	let totalHistoricalDau = 0;
 	let totalWeightedVelocity = 0;
+	let velocityContributorCount = 0;
 
 	for (const sub of latestData) {
 		const estDau = Math.floor(sub.weeklyVisitors / 7);
 		totalLatestDau += estDau;
 
-		const hist = historicalData.find((h) => h.subredditId === sub.subredditId);
-		let histDau = 0;
+		// O(1) lookup instead of O(N) Array.find
+		const hist = historicalMap.get(sub.subredditId);
 		if (hist) {
-			histDau = Math.floor(hist.weeklyVisitors / 7);
+			const histDau = Math.floor(hist.weeklyVisitors / 7);
 			totalHistoricalDau += histDau;
 		}
 
-		const subHistory = data
-			.filter((d) => d.subredditId === sub.subredditId)
+		// Use pre-grouped data instead of filtering entire dataset
+		const subHistory = (dataBySubreddit.get(sub.subredditId) || [])
 			.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
 
-		let baselineWau = sub.weeklyVisitors;
-		if (subHistory.length > 0) {
-			let bestMatch = subHistory[0];
-			let smallestDiff = Math.abs(new Date(bestMatch.recordedAt).getTime() - targetTime);
+		const baselinePoint = findClosestToDate(subHistory, targetDate);
+		const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
 
-			for (const point of subHistory) {
-				const diff = Math.abs(new Date(point.recordedAt).getTime() - targetTime);
-				if (diff < smallestDiff) {
-					smallestDiff = diff;
-					bestMatch = point;
-				}
-			}
-			baselineWau = bestMatch.weeklyVisitors;
-		}
-
-		const velocity = (sub.weeklyVisitors - baselineWau) * sub.arpuMultiplier * sub.monetizationWeight;
+		// Percentage-based velocity instead of absolute delta
+		const velocity = calculateSubVelocity(
+			sub.weeklyVisitors,
+			baselineWau,
+			sub.arpuMultiplier,
+			sub.monetizationWeight,
+		);
 		totalWeightedVelocity += velocity;
+		velocityContributorCount++;
 	}
 
 	const overallGrowthPercent =
@@ -132,8 +134,11 @@ export const calculateAndSaveMacroMetrics = async () => {
 			: 0;
 	const overallNetNewDau = totalLatestDau - totalHistoricalDau;
 
-	const rawVelocityIndexScore = totalWeightedVelocity / 100000;
-	const velocityIndexScore = Math.max(-10, Math.min(10, rawVelocityIndexScore));
+	// Dynamic normalization instead of magic /100000 constant
+	const velocityIndexScore = normalizeVelocityScore(
+		totalWeightedVelocity,
+		velocityContributorCount,
+	);
 
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)

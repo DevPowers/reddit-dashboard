@@ -31,7 +31,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"DAU Estimate": row.overallDauEstimate,
+			"Engagement Index": row.overallDauEstimate,
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
 	}, [data]);
@@ -104,11 +104,11 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 								fontWeight: "bold",
 								marginBottom: "4px",
 							}}
-							formatter={(value: number, name: string) => {
+							formatter={(value: any, name: any) => {
 								if (name === "Velocity Index") {
 									return [value > 0 ? `+${value}` : value, name];
 								}
-								return [value.toLocaleString(), name];
+								return [Number(value).toLocaleString(), name];
 							}}
 						/>
 						<Legend 
@@ -119,7 +119,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 						<Line
 							yAxisId="left"
 							type="monotone"
-							dataKey="DAU Estimate"
+							dataKey="Engagement Index"
 							stroke="#6366F1"
 							strokeWidth={3}
 							dot={false}

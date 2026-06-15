@@ -15,8 +15,10 @@ describe('generateMockMetrics', () => {
       return date.getFullYear() === 2026 && date.getMonth() === 2 && date.getDate() === 31;
     });
 
-    // Count total subreddits in TARGET_SUBREDDITS
-    const totalSubreddits = TARGET_SUBREDDITS.reduce((acc, curr) => acc + curr.subreddits.length, 0);
+    // Count total subreddits in TARGET_SUBREDDITS (excluding PERSONAL_TRACKING, which the mock generator skips)
+    const totalSubreddits = TARGET_SUBREDDITS
+      .filter(g => g.category !== 'personal_tracking')
+      .reduce((acc, curr) => acc + curr.subreddits.length, 0);
 
     expect(t0Records.length).toBe(totalSubreddits);
   });

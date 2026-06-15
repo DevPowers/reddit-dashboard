@@ -15,6 +15,13 @@
       "when": 1781442234923,
       "tag": "0001_familiar_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781525468913,
+      "tag": "0002_misty_robin_chapel",
+      "breakpoints": true
     }
   ]
 }

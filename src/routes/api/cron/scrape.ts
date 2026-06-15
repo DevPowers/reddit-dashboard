@@ -108,6 +108,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 						category: group.category,
 						monetizationWeight: group.monetizationWeight,
 						arpuExpectation: group.arpuExpectation,
+						arpuMultiplier: group.arpuMultiplier,
 						population: group.population,
 					},
 				})
