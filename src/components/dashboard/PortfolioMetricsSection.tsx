@@ -39,12 +39,12 @@ interface PortfolioMetricsSectionProps {
 }
 
 const getVelocityColorClass = (velocity: number) => {
-	if (velocity >= 8) return "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"; // Exceptional
-	if (velocity >= 4) return "text-emerald-500 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"; // Strong
-	if (velocity > 0) return "text-success"; // Modest
+	if (velocity >= 8) return "text-emerald-300"; // Exceptional
+	if (velocity >= 4) return "text-emerald-400"; // Strong
+	if (velocity > 0) return "text-emerald-500"; // Modest
 	if (velocity === 0) return "text-text-muted"; // Flat
 	if (velocity > -4) return "text-red-400"; // Modest Decline
-	return "text-danger"; // Severe Decline
+	return "text-red-500"; // Severe Decline
 };
 
 export function PortfolioMetricsSection({
@@ -76,9 +76,11 @@ export function PortfolioMetricsSection({
 				<button 
 					type="button"
 					onClick={() => setOpenModal("dau")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative overflow-hidden group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
-					<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
 						Engagement Index Growth
 					</h3>
@@ -101,15 +103,30 @@ export function PortfolioMetricsSection({
 				<button
 					type="button"
 					onClick={() => setOpenModal("velocity")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative overflow-hidden group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
-					<div className="absolute top-0 right-0 w-32 h-32 bg-[#6366F1]/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
-					<h3 
-						className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5"
-						title="Scale: -10 to 10.&#10;0 = Flat Growth&#10;1 to 3 = Modest Growth (2-3% avg)&#10;4 to 7 = Strong Growth (4-8% avg)&#10;8 to 10 = Exceptional Growth (10%+ avg)&#10;Velocity is heavily weighted by ARPU potential."
-					>
+					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+						<div className="absolute top-0 right-0 w-32 h-32 bg-[#6366F1]/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+					</div>
+					<h3 className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5">
 						ARPU Velocity Index
-						<Info size={14} className="text-text-muted opacity-70" />
+						<div className="relative flex items-center group/tooltip">
+							<Info size={14} className="text-text-muted opacity-70 hover:opacity-100 transition-opacity" />
+							<div className="absolute top-full left-0 mt-2 w-64 p-3 bg-obsidian border border-obsidian-border rounded-md shadow-2xl text-xs text-text-main opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all pointer-events-none z-20 text-left font-normal leading-relaxed">
+								<div className="font-bold mb-1">Scale: -10 to 10</div>
+								<div className="text-text-muted">
+									<span className="text-emerald-300">8 to 10 = Exceptional</span><br/>
+									<span className="text-emerald-400">4 to 7 = Strong Growth</span><br/>
+									<span className="text-emerald-500">1 to 3 = Modest Growth</span><br/>
+									<span className="text-text-muted">0 = Flat Growth</span><br/>
+									<span className="text-red-400">-1 to -3 = Modest Decline</span><br/>
+									<span className="text-red-500">-4 to -10 = Severe Decline</span>
+								</div>
+								<div className="mt-2 text-[10px] text-text-muted italic opacity-80">
+									*Velocity is heavily weighted by ARPU potential.
+								</div>
+							</div>
+						</div>
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
