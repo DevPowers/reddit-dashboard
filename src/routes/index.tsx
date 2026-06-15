@@ -3,12 +3,9 @@ import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
 import { generateMockMetrics, generateMockPlatformHistory } from "../lib/mockData";
-import { ArpuExpectation, Category } from "../types";
+import { ArpuExpectation, Category, type MetricData } from "../types";
 import {
 	getQuarterEndBaseline,
-	calculateSubVelocity,
-	normalizeVelocityScore,
-	findClosestToDate,
 } from "../lib/calculations";
 
 // Import Refactored View Components
@@ -28,21 +25,7 @@ export const Route = createFileRoute("/")({
 	staleTime: 60_000,
 });
 
-interface MetricData {
-	id: number;
-	subredditId: number;
-	name: string;
-	category: string;
-	subCategory: string;
-	monetizationWeight: number;
-	arpuMultiplier: number;
-	arpuExpectation: string | null;
-	population: number | null;
-	weeklyVisitors: number;
-	weeklyContributions: number;
-	recordedAt: Date | string;
-	growthPercent?: number;
-}
+
 
 function Dashboard() {
 	const { metrics: serverData, platformHistory } = Route.useLoaderData();
@@ -71,8 +54,8 @@ function Dashboard() {
 	const mockHistory = useMemo(() => generateMockPlatformHistory(), []);
 
 	// Determine data source
-	const dataToUse: MetricData[] = useMockData ? mockData : serverData;
-	const historyToUse = useMockData ? mockHistory : platformHistory;
+	const dataToUse: MetricData[] = useMemo(() => useMockData ? mockData : serverData, [useMockData, mockData, serverData]);
+	const historyToUse = useMemo(() => useMockData ? mockHistory : platformHistory, [useMockData, mockHistory, platformHistory]);
 
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
 	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
@@ -153,77 +136,24 @@ function Dashboard() {
 		};
 	}, [dataToUse]);
 
-	// Calculate Top-Level Portfolio Metrics
+	// Deduplicated Portfolio Metrics Calculation
 	const portfolioMetrics = useMemo(() => {
-		let totalLatestDau = 0;
-		let totalHistoricalDau = 0;
-		let totalWeightedVelocity = 0;
-		let velocityContributorCount = 0;
-
-		const targetDate = new Date();
-		targetDate.setDate(targetDate.getDate() - 28);
-
-		// O(1) lookup map for historical data (fixes Array.find in loop)
-		const histLookup = new Map<number, MetricData>();
-		for (const h of historicalData) {
-			histLookup.set(h.subredditId, h);
+		const latest = historyToUse[historyToUse.length - 1];
+		
+		if (!latest) {
+			return {
+				overallGrowthPercent: 0,
+				overallNetNew: 0,
+				weightedVelocity: 0,
+			};
 		}
-
-		// Pre-group data by subredditId (fixes filter/sort in loop)
-		const dataBySubreddit = new Map<number, MetricData[]>();
-		for (const d of dataToUse) {
-			if (!dataBySubreddit.has(d.subredditId)) {
-				dataBySubreddit.set(d.subredditId, []);
-			}
-			dataBySubreddit.get(d.subredditId)!.push(d);
-		}
-
-		for (const sub of latestData) {
-			const estDau = Math.floor(sub.weeklyVisitors / 7);
-			totalLatestDau += estDau;
-
-			const hist = histLookup.get(sub.subredditId);
-			if (hist) {
-				const histDau = Math.floor(hist.weeklyVisitors / 7);
-				totalHistoricalDau += histDau;
-			}
-
-			// Use pre-grouped data instead of filtering entire dataset
-			const subHistory = (dataBySubreddit.get(sub.subredditId) || [])
-				.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
-
-			const baselinePoint = findClosestToDate(subHistory, targetDate);
-			const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
-
-			// Percentage-based velocity
-			const velocity = calculateSubVelocity(
-				sub.weeklyVisitors,
-				baselineWau,
-				sub.arpuMultiplier,
-				sub.monetizationWeight,
-			);
-			totalWeightedVelocity += velocity;
-			velocityContributorCount++;
-		}
-
-		const overallGrowthPercent =
-			totalHistoricalDau > 0
-				? ((totalLatestDau - totalHistoricalDau) / totalHistoricalDau) * 100
-				: 0;
-		const overallNetNew = totalLatestDau - totalHistoricalDau;
-
-		// Dynamic normalization instead of magic /100000 constant
-		const weightedVelocity = normalizeVelocityScore(
-			totalWeightedVelocity,
-			velocityContributorCount,
-		);
 
 		return {
-			overallGrowthPercent,
-			overallNetNew,
-			weightedVelocity,
+			overallGrowthPercent: latest.overallDauGrowthPercent,
+			overallNetNew: latest.overallNetNewDau,
+			weightedVelocity: latest.velocityIndexScore,
 		};
-	}, [latestData, historicalData, dataToUse]);
+	}, [historyToUse]);
 
 	// Calculate ARPU Tier Aggregates
 	const arpuAggregates = useMemo(() => {
@@ -262,12 +192,12 @@ function Dashboard() {
 
 		for (const row of filteredData) {
 			const recordedDate = new Date(row.recordedAt);
-			const dateStr = format(recordedDate, "MMM dd");
-			if (!byDate.has(dateStr)) {
-				byDate.set(dateStr, { sortKey: recordedDate.getTime(), categories: new Map() });
+			const dateKey = format(recordedDate, "MMM dd, yyyy");
+			if (!byDate.has(dateKey)) {
+				byDate.set(dateKey, { sortKey: recordedDate.getTime(), categories: new Map() });
 			}
 
-			const entry = byDate.get(dateStr)!;
+			const entry = byDate.get(dateKey)!;
 			// Use earliest timestamp for this date as the sort key
 			entry.sortKey = Math.min(entry.sortKey, recordedDate.getTime());
 
@@ -339,14 +269,23 @@ function Dashboard() {
 			.sort((a, b) => b.avgGrowth - a.avgGrowth); // Sort groups by avg growth descending
 	}, [latestData, selectedCategory, activeTier]);
 
-	// Strict 5 professional terminal colors
-	const colors = [
-		"#6366F1", // Slate Blue
-		"#FF4500", // Reddit Orangered
-		"#06B6D4", // Cyan
-		"#F59E0B", // Amber
-		"#8B5CF6", // Purple
-	];
+	const colors = useMemo(() => [
+		"var(--color-chart-1)",
+		"var(--color-chart-2)",
+		"var(--color-chart-3)",
+		"var(--color-chart-4)",
+		"var(--color-chart-5)",
+		"var(--color-chart-6)",
+		"var(--color-chart-7)",
+		"var(--color-chart-8)",
+		"var(--color-chart-9)",
+		"var(--color-chart-10)",
+		"var(--color-chart-11)",
+		"var(--color-chart-12)",
+		"var(--color-chart-13)",
+		"var(--color-chart-14)",
+		"var(--color-chart-15)",
+	], []);
 
 	return (
 		<div className="page-wrap py-10 max-w-7xl mx-auto px-4">

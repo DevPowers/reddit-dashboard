@@ -1,23 +1,8 @@
 import { TARGET_SUBREDDITS } from "../data/subreddits";
-import { Category } from "../types";
+import { Category, type MetricData } from "../types";
 
-export interface MetricRow {
-	id: number;
-	subredditId: number;
-	name: string;
-	category: string;
-	subCategory: string;
-	monetizationWeight: number;
-	arpuMultiplier: number;
-	arpuExpectation: string;
-	population: number;
-	weeklyVisitors: number;
-	weeklyContributions: number;
-	recordedAt: Date;
-}
-
-export function generateMockMetrics(): MetricRow[] {
-	const mockData: MetricRow[] = [];
+export function generateMockMetrics(): MetricData[] {
+	const mockData: MetricData[] = [];
 	let idCounter = 1;
 	let subIdCounter = 1;
 	const subIdMap = new Map<string, number>();
@@ -53,7 +38,7 @@ export function generateMockMetrics(): MetricRow[] {
 
 				// Add some noise and trend (e.g. growing over time)
 				// Ensure that at i=0, there's no trend factor
-				const trendFactor = 1 + i * 0.005; // 0.5% growth per day from t0
+				const trendFactor = 1 + i * 0.0005; // 0.05% growth per day from t0
 				// Less noise at t0 to establish a clean baseline, more noise later
 				const noise = i === 0 ? 1 : 0.9 + Math.random() * 0.2; // +/- 10%
 
@@ -72,9 +57,9 @@ export function generateMockMetrics(): MetricRow[] {
 					name: subName,
 					category: group.category,
 					subCategory: group.subCategory,
-					monetizationWeight: group.monetizationWeight || 1.0,
+					monetizationWeight: group.monetizationWeight ?? 1.0,
 					arpuMultiplier: group.arpuMultiplier,
-					arpuExpectation: group.arpuExpectation || "unknown",
+					arpuExpectation: group.arpuExpectation ?? null,
 					population: group.population || 0,
 					weeklyVisitors: visitors,
 					weeklyContributions: contributions,
@@ -106,7 +91,7 @@ export function generateMockPlatformHistory() {
 		recordedAt.setDate(anchorDate.getDate() + i);
 		if (recordedAt > now) break;
 
-		const trendFactor = 1 + i * 0.008;
+		const trendFactor = 1 + i * 0.0008;
 		const noise = i === 0 ? 1 : 0.95 + Math.random() * 0.1;
 		
 		const dau = Math.floor(baseDau * trendFactor * noise);
@@ -116,7 +101,7 @@ export function generateMockPlatformHistory() {
 			id: idCounter++,
 			recordedAt: recordedAt.toISOString(),
 			overallDauEstimate: dau,
-			overallDauGrowthPercent: i * 0.8,
+			overallDauGrowthPercent: i * 0.08,
 			overallNetNewDau: dau - baseDau,
 			velocityIndexScore: velocity,
 		});

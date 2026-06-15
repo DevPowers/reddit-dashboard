@@ -103,10 +103,10 @@ export function PortfolioMetricsSection({
 				<button
 					type="button"
 					onClick={() => setOpenModal("velocity")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-[#6366F1]/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-1/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
-						<div className="absolute top-0 right-0 w-32 h-32 bg-[#6366F1]/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-1/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5">
 						ARPU Velocity Index
@@ -137,7 +137,7 @@ export function PortfolioMetricsSection({
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
-						<span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
+						<span className="w-1.5 h-1.5 rounded-full bg-chart-1" />
 						Normalized Revenue Momentum Score
 					</div>
 				</button>
@@ -148,10 +148,10 @@ export function PortfolioMetricsSection({
 				<button
 					type="button"
 					onClick={() => setActiveTier(activeTier === "high" ? null : "high")}
-					className={`dash-card p-6 border-t-4 border-t-[#FCD34D] text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "high" ? "ring-2 ring-[#FCD34D] bg-obsidian-light" : ""}`}
+					className={`dash-card p-6 border-t-4 border-t-amber-300 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "high" ? "ring-2 ring-amber-300 bg-obsidian-light" : ""}`}
 				>
 					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-[#FCD34D]" />
+						<span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
 						High ARPU
 					</h3>
 					<div
@@ -159,7 +159,7 @@ export function PortfolioMetricsSection({
 					>
 						{formatGrowth(arpuAggregates.high)}
 					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Q1</p>
+					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
 				</button>
 
 				<button
@@ -167,10 +167,10 @@ export function PortfolioMetricsSection({
 					onClick={() =>
 						setActiveTier(activeTier === "medium" ? null : "medium")
 					}
-					className={`dash-card p-6 border-t-4 border-t-[#94A3B8] text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "medium" ? "ring-2 ring-[#94A3B8] bg-obsidian-light" : ""}`}
+					className={`dash-card p-6 border-t-4 border-t-slate-400 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "medium" ? "ring-2 ring-slate-400 bg-obsidian-light" : ""}`}
 				>
 					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-[#94A3B8]" />
+						<span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
 						Medium ARPU
 					</h3>
 					<div
@@ -178,16 +178,16 @@ export function PortfolioMetricsSection({
 					>
 						{formatGrowth(arpuAggregates.medium)}
 					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Q1</p>
+					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
 				</button>
 
 				<button
 					type="button"
 					onClick={() => setActiveTier(activeTier === "low" ? null : "low")}
-					className={`dash-card p-6 border-t-4 border-t-[#B45309] text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "low" ? "ring-2 ring-[#B45309] bg-obsidian-light" : ""}`}
+					className={`dash-card p-6 border-t-4 border-t-amber-700 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "low" ? "ring-2 ring-amber-700 bg-obsidian-light" : ""}`}
 				>
 					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-[#B45309]" />
+						<span className="w-2.5 h-2.5 rounded-full bg-amber-700" />
 						Low ARPU
 					</h3>
 					<div
@@ -195,7 +195,7 @@ export function PortfolioMetricsSection({
 					>
 						{formatGrowth(arpuAggregates.low)}
 					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Q1</p>
+					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
 				</button>
 			</div>
 
@@ -228,12 +228,12 @@ export function PortfolioMetricsSection({
 										data={chartData}
 										margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
 									>
-										<CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
-										<XAxis dataKey="date" stroke="#666" tick={{ fill: "#888", fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
+										<CartesianGrid strokeDasharray="3 3" stroke="var(--color-obsidian-border)" vertical={false} />
+										<XAxis dataKey="date" stroke="var(--color-text-muted)" tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
 										<YAxis 
 											yAxisId="left"
-											stroke={openModal === "dau" ? "#FF4500" : "#6366F1"} 
-											tick={{ fill: openModal === "dau" ? "#FF4500" : "#6366F1", fontSize: 12 }} 
+											stroke={openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)"} 
+											tick={{ fill: openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)", fontSize: 12 }} 
 											tickFormatter={(value) => openModal === "dau" ? `${(value / 1000).toFixed(0)}k` : value.toFixed(1)}
 											tickMargin={10} axisLine={false} tickLine={false} 
 										/>
@@ -241,34 +241,34 @@ export function PortfolioMetricsSection({
 											<YAxis 
 												yAxisId="right"
 												orientation="right"
-												stroke="#10B981" 
-												tick={{ fill: "#10B981", fontSize: 12 }} 
+												stroke="var(--color-success)" 
+												tick={{ fill: "var(--color-success)", fontSize: 12 }} 
 												tickFormatter={(value) => `${value}%`}
 												tickMargin={10} axisLine={false} tickLine={false} 
 											/>
 										)}
 										<Tooltip
-											contentStyle={{ backgroundColor: "#1e1e1e", border: "1px solid #333", borderRadius: "8px", color: "#fff" }}
-											itemStyle={{ color: "#fff" }}
+											contentStyle={{ backgroundColor: "var(--color-obsidian-light)", border: "1px solid var(--color-obsidian-border)", borderRadius: "8px", color: "var(--color-text-main)" }}
+											itemStyle={{ color: "var(--color-text-main)" }}
 										/>
 										<Line
 											yAxisId="left"
 											type="monotone"
 											dataKey={openModal === "dau" ? "Engagement Index" : "Velocity Index"}
-											stroke={openModal === "dau" ? "#FF4500" : "#6366F1"}
+											stroke={openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)"}
 											strokeWidth={3}
 											dot={false}
-											activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
+											activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
 										/>
 										{openModal === "dau" && (
 											<Line
 												yAxisId="right"
 												type="monotone"
 												dataKey="Percent Growth"
-												stroke="#10B981"
+												stroke="var(--color-success)"
 												strokeWidth={3}
 												dot={false}
-												activeDot={{ r: 6, stroke: "#FFF", strokeWidth: 2 }}
+												activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
 											/>
 										)}
 									</LineChart>

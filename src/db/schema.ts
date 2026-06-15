@@ -8,6 +8,7 @@ import {
 	timestamp,
 	varchar,
 	boolean,
+	index,
 } from "drizzle-orm/pg-core";
 
 export const subreddits = pgTable("subreddits", {
@@ -71,17 +72,24 @@ export const subredditGroupsRelations = relations(
 	}),
 );
 
-export const metricsHistory = pgTable("metrics_history", {
-	id: serial("id").primaryKey(),
-	subredditId: integer("subreddit_id")
-		.references(() => subreddits.id, { onDelete: "cascade" })
-		.notNull(),
-	weeklyVisitors: integer("weekly_visitors").notNull(),
-	weeklyContributions: integer("weekly_contributions").notNull(),
-	recordedAt: timestamp("recorded_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-});
+export const metricsHistory = pgTable(
+	"metrics_history",
+	{
+		id: serial("id").primaryKey(),
+		subredditId: integer("subreddit_id")
+			.references(() => subreddits.id, { onDelete: "cascade" })
+			.notNull(),
+		weeklyVisitors: integer("weekly_visitors").notNull(),
+		weeklyContributions: integer("weekly_contributions").notNull(),
+		recordedAt: timestamp("recorded_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [
+		index("recorded_at_idx").on(t.recordedAt),
+		index("subreddit_id_idx").on(t.subredditId),
+	],
+);
 
 export const metricsHistoryRelations = relations(metricsHistory, ({ one }) => ({
 	subreddit: one(subreddits, {

@@ -12,8 +12,27 @@
   --color-orangered-dark: #cc3700;
   --color-orangered-light: rgba(255, 69, 0, 0.15);
   
+  --color-text-main: #E2E8F0;
+  --color-text-muted: #94A3B8;
+  
   --color-success: #10B981;
   --color-danger: #EF4444;
+
+  --color-chart-1: #6366F1;
+  --color-chart-2: #FF4500;
+  --color-chart-3: #06B6D4;
+  --color-chart-4: #F59E0B;
+  --color-chart-5: #8B5CF6;
+  --color-chart-6: #10B981;
+  --color-chart-7: #EC4899;
+  --color-chart-8: #3B82F6;
+  --color-chart-9: #14B8A6;
+  --color-chart-10: #F43F5E;
+  --color-chart-11: #84CC16;
+  --color-chart-12: #A855F7;
+  --color-chart-13: #EAB308;
+  --color-chart-14: #0EA5E9;
+  --color-chart-15: #D946EF;
 }
 
 :root {
@@ -28,6 +47,21 @@
   --text-muted: #94A3B8;
   --success: #10B981;
   --danger: #EF4444;
+  --chart-1: #6366F1;
+  --chart-2: #FF4500;
+  --chart-3: #06B6D4;
+  --chart-4: #F59E0B;
+  --chart-5: #8B5CF6;
+  --chart-6: #10B981;
+  --chart-7: #EC4899;
+  --chart-8: #3B82F6;
+  --chart-9: #14B8A6;
+  --chart-10: #F43F5E;
+  --chart-11: #84CC16;
+  --chart-12: #A855F7;
+  --chart-13: #EAB308;
+  --chart-14: #0EA5E9;
+  --chart-15: #D946EF;
 }
 
 * {

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "./index";
+import { db } from "./index.server";
 
 async function cleanup() {
 	console.log("Starting deduplication cleanup...");

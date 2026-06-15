@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq, ne, asc } from "drizzle-orm";
-import { db } from "../db/index";
+import { db } from "../db/index.server";
 import { Category } from "../types";
 import {
 	metricsHistory,

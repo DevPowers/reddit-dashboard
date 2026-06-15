@@ -86,13 +86,13 @@ export default function MapChart({
 									<Geography
 										key={geo.rsmKey}
 										geography={geo}
-										fill={isHighlighted ? "#FF4500" : "#1F3238"}
-										stroke="#0B1416"
+										fill={isHighlighted ? "var(--color-orangered)" : "var(--color-obsidian-border)"}
+										stroke="var(--color-obsidian)"
 										strokeWidth={0.5}
 										style={{
 											default: { outline: "none" },
 											hover: {
-												fill: isHighlighted ? "#FF4500" : "#3B82F6",
+												fill: isHighlighted ? "var(--color-orangered)" : "var(--color-chart-8)",
 												outline: "none",
 												cursor: "pointer",
 												transition: "fill 0.2s ease",
@@ -108,7 +108,7 @@ export default function MapChart({
 						<Marker key={name} coordinates={coordinates}>
 							<text
 								textAnchor="middle"
-								fill="#FFF"
+								fill="var(--color-text-main)"
 								fontSize={10}
 								fontWeight="bold"
 								style={{
@@ -128,14 +128,14 @@ export default function MapChart({
 				<button
 					type="button"
 					onClick={handleZoomIn}
-					className="bg-[#162428] border border-[#1F3238] text-[#E2E8F0] w-8 h-8 rounded flex items-center justify-center hover:bg-[#1F3238] transition-colors focus:outline-none"
+					className="bg-obsidian-light border border-obsidian-border text-text-main w-8 h-8 rounded flex items-center justify-center hover:bg-obsidian-border transition-colors focus:outline-none cursor-pointer"
 				>
 					+
 				</button>
 				<button
 					type="button"
 					onClick={handleZoomOut}
-					className="bg-[#162428] border border-[#1F3238] text-[#E2E8F0] w-8 h-8 rounded flex items-center justify-center hover:bg-[#1F3238] transition-colors focus:outline-none"
+					className="bg-obsidian-light border border-obsidian-border text-text-main w-8 h-8 rounded flex items-center justify-center hover:bg-obsidian-border transition-colors focus:outline-none cursor-pointer"
 				>
 					-
 				</button>

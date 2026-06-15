@@ -124,7 +124,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         monetizationWeight: 3.0,
         arpuMultiplier: 3.5,
         population: 124000000,
-        subreddits: ["tokyo", "japan", "japanese", "japanlife", "JapanFinance"],
+        subreddits: ["tokyo", "japan", "japanlife", "JapanFinance"],
     },
     {
         category: Category.GEOGRAPHY,
@@ -173,7 +173,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         monetizationWeight: 2.0,
         arpuMultiplier: 2.0,
         population: 47850793,
-        subreddits: ["madrid", "Barcelona", "LaLiga"],
+        subreddits: ["madrid", "spain", "LaLiga"],
     },
     {
         category: Category.GEOGRAPHY,
@@ -213,7 +213,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         monetizationWeight: 1.0,
         arpuMultiplier: 0.3,
         population: 1476625576,
-        subreddits: ["mumbai", "delhi", "hindi", "IndiaCricket", "BollyBlindsNGossip", "IndiaInvestments", "personalfinanceindia"],
+        subreddits: ["mumbai", "delhi", "india", "IndiaCricket", "Cricket", "BollyBlindsNGossip", "IndiaInvestments", "personalfinanceindia"],
     },
     {
         category: Category.GEOGRAPHY,

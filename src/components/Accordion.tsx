@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export function Accordion({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="divide-y divide-[#1F3238] border-b border-[#1F3238]">
+		<div className="divide-y divide-obsidian-border border-b border-obsidian-border">
 			{children}
 		</div>
 	);
@@ -24,30 +24,30 @@ export function AccordionItem({
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
-		<div className="bg-[#0B1416]/50 transition-colors">
+		<div className="bg-obsidian/50 transition-colors">
 			<button
 				type="button"
 				onClick={() => setIsOpen(!isOpen)}
-				className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#1F3238]/30 transition-all focus:outline-none cursor-pointer"
+				className="w-full flex items-center justify-between px-6 py-4 hover:bg-obsidian-border/30 transition-all focus:outline-none cursor-pointer"
 			>
 				<div className="flex items-center gap-3">
 					<ChevronDown
 						size={18}
-						className={`text-[#94A3B8] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+						className={`text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
 					/>
-					<span className="text-sm font-bold text-[#E2E8F0] uppercase tracking-wide">
+					<span className="text-sm font-bold text-text-main uppercase tracking-wide">
 						{title}
 					</span>
 				</div>
 				<div className="flex items-center gap-4">
-					<span className="text-xs text-[#94A3B8]">Avg Growth:</span>
+					<span className="text-xs text-text-muted">Avg Growth:</span>
 					<span className={`text-sm font-mono font-bold ${valueClass}`}>
 						{value}
 					</span>
 				</div>
 			</button>
 			{isOpen && (
-				<div className="px-6 py-4 border-t border-[#1F3238]/50 bg-[#0F1C1E]">
+				<div className="px-6 py-4 border-t border-obsidian-border/50 bg-obsidian-light">
 					{children}
 				</div>
 			)}

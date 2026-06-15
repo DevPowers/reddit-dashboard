@@ -4,10 +4,21 @@ import * as cheerio from "cheerio";
 export const Route = createFileRoute("/api/reddit/$subreddit")({
 	server: {
 		handlers: {
-			GET: async ({ params }) => {
+			GET: async ({ params, request }) => {
 				const { subreddit } = params;
 
 				try {
+					const ADMIN_SECRET = process.env.ADMIN_SECRET;
+					if (process.env.NODE_ENV === "production" && !ADMIN_SECRET) {
+						return Response.json({ error: "Server Configuration Error" }, { status: 500 });
+					}
+					if (ADMIN_SECRET) {
+						const authHeader = request.headers.get("authorization");
+						if (authHeader !== `Bearer ${ADMIN_SECRET}`) {
+							return Response.json({ error: "Unauthorized" }, { status: 401 });
+						}
+					}
+
 					const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 
 					if (!SCRAPER_API_KEY) {

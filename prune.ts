@@ -1,4 +1,4 @@
-import { db } from "./src/db/index";
+import { db } from "./src/db/index.server";
 import { subredditGroups, subreddits } from "./src/db/schema";
 import { TARGET_SUBREDDITS } from "./src/data/subreddits";
 import { notInArray, inArray } from "drizzle-orm";
@@ -7,9 +7,9 @@ async function main() {
     console.log("Starting manual prune...");
     const expectedSubNames = new Set<string>();
     for (const group of TARGET_SUBREDDITS) {
-        for (const sub of group.subreddits) {
-            expectedSubNames.add(sub);
-        }
+        group.subreddits.forEach((s: any) => {
+            expectedSubNames.add(s);
+        });
     }
 
     const trackedSubs = await db

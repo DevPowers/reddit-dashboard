@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import { TARGET_SUBREDDITS } from "../data/subreddits";
-import { db } from "./index";
+import { db } from "./index.server";
 import { subredditGroups, subreddits, trackingGroups } from "./schema";
 
 async function seed() {

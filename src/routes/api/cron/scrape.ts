@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
 import { eq, gte, notInArray, asc, inArray } from "drizzle-orm";
 import { TARGET_SUBREDDITS } from "../../../data/subreddits";
-import { db } from "../../../db/index";
+import { db } from "../../../db/index.server";
 import {
 	cronLogs,
 	metricsHistory,
@@ -17,12 +17,14 @@ import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
 export const scrapeHandler = async ({ request }: { request: Request }) => {
 	const CRON_SECRET = process.env.CRON_SECRET;
 
-	// Verify Vercel Cron Secret
-	if (CRON_SECRET) {
-		const authHeader = request.headers.get("authorization");
-		if (authHeader !== `Bearer ${CRON_SECRET}`) {
-			return Response.json({ error: "Unauthorized" }, { status: 401 });
-		}
+	if (!CRON_SECRET) {
+		logger.error("Cron", "Missing CRON_SECRET environment variable. Aborting to prevent unauthorized access.");
+		return Response.json({ error: "Server Configuration Error" }, { status: 500 });
+	}
+
+	const authHeader = request.headers.get("authorization");
+	if (authHeader !== `Bearer ${CRON_SECRET}`) {
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
 	// Extract available keys from env
@@ -76,7 +78,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				throw new Error("All ScraperAPI keys have been exhausted/rate-limited within the last 24 hours.");
 			}
 			
-			await db.update(scraperKeys).set({ isActive: false });
+			await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
 			activeKeyRow = availableKeys[0];
 			await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, activeKeyRow.id));
 			logger.info("Cron", `Rotated active key to index ${activeKeyRow.keyIndex}`);
@@ -100,6 +102,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 					subCategory: group.subCategory,
 					monetizationWeight: group.monetizationWeight,
 					arpuExpectation: group.arpuExpectation,
+					arpuMultiplier: group.arpuMultiplier,
 					population: group.population,
 				})
 				.onConflictDoUpdate({
@@ -174,7 +177,10 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		}
 
 		// --- 2. Fetch Sync'd Subs and Scrape ---
-		const allSubs = await db.select().from(subreddits);
+		const allSubs = await db
+			.selectDistinct({ id: subreddits.id, name: subreddits.name })
+			.from(subreddits)
+			.innerJoin(subredditGroups, eq(subreddits.id, subredditGroups.subredditId));
 		
 		// Find which subreddits have already been scraped within the interval
 		const scrapeIntervalDays = parseInt(process.env.SCRAPE_INTERVAL_DAYS || "3", 10);
@@ -199,7 +205,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		for (let i = 0; i < subs.length; i += 5) {
 			const batch = subs.slice(i, i + 5);
 
-			const batchPromises = batch.map(async (sub) => {
+			for (const sub of batch) {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
@@ -220,7 +226,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 					
 					if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
 						logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
-						await db.update(scraperKeys).set({ isActive: false });
+						await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
 						await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
 						
 						activeKeyRow = fallbackKeyRow;
@@ -234,11 +240,12 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 					
 					if (!response.ok) {
 						logger.error("Cron", `Fallback fetch failed for ${sub.name}`);
-						return {
+						results.push({
 							name: sub.name,
 							status: "failed",
 							error: response.statusText,
-						};
+						});
+						continue;
 					}
 				}
 
@@ -256,31 +263,28 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 					10,
 				);
 
+				if (weekly_visitors === 0 && weekly_contributions === 0) {
+					logger.warn("Cron", `Missing or zero metrics for ${sub.name}. DOM may have changed or page didn't fully render.`);
+					results.push({
+						name: sub.name,
+						status: "failed",
+						error: "DOM parse failed or zero metrics",
+					});
+					continue;
+				}
+
 				await db.insert(metricsHistory).values({
 					subredditId: sub.id,
 					weeklyVisitors: weekly_visitors,
 					weeklyContributions: weekly_contributions,
 				});
 
-				return {
+				results.push({
 					name: sub.name,
 					status: "success",
 					weeklyVisitors: weekly_visitors,
 					weeklyContributions: weekly_contributions,
-				};
-			});
-
-			const batchResults = await Promise.allSettled(batchPromises);
-
-			for (const res of batchResults) {
-				if (res.status === "fulfilled") {
-					results.push(res.value);
-				} else {
-					results.push({
-						status: "failed",
-						error: res.reason,
-					});
-				}
+				});
 			}
 
 			// Slight delay between batches
@@ -307,7 +311,8 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 			})
 			.where(eq(cronLogs.id, log.id));
 
-		if (finalStatus === "success") {
+		const successCount = results.filter(r => r.status === "success").length;
+		if (successCount > 0) {
 			try {
 				await calculateAndSaveMacroMetrics();
 				logger.info("Cron", "Macro metrics calculated and saved.");

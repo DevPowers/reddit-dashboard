@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { eq, desc } from "drizzle-orm";
-import { db } from "../db/index";
+import { db } from "../db/index.server";
 import { metricsHistory, subreddits } from "../db/schema";
 
 export const getSubredditMetrics = createServerFn({ method: "GET" })

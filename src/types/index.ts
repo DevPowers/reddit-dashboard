@@ -20,3 +20,19 @@ export interface TrackedGroup {
 	population?: number;
 	subreddits: string[];
 }
+
+export interface MetricData {
+	id: number;
+	subredditId: number;
+	name: string;
+	category: string;
+	subCategory: string;
+	monetizationWeight: number;
+	arpuMultiplier: number;
+	arpuExpectation: string | null;
+	population: number | null;
+	weeklyVisitors: number;
+	weeklyContributions: number;
+	recordedAt: Date | string;
+	growthPercent?: number;
+}

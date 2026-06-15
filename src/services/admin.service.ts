@@ -1,11 +1,19 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { db } from "../db/index";
+import { db } from "../db/index.server";
 import { cronLogs } from "../db/schema";
 
 export const getAdminStats = async () => {
-	// 1. Cron Stats
+	// 1. DB Health Check
+	let dbHealth = "Healthy";
+	try {
+		await db.execute(sql`SELECT 1`);
+	} catch (e) {
+		dbHealth = "Unreachable";
+	}
+
+	// 2. Cron Stats
 	const totalCrons = await db
-		.select({ count: sql<number>`count(*)` })
+		.select({ count: sql<number>`count(*)::int` })
 		.from(cronLogs);
 	const lastCron = await db
 		.select()
@@ -14,11 +22,11 @@ export const getAdminStats = async () => {
 		.limit(1);
 
 	const avgDurationResult = await db
-		.select({ avg: sql<number>`avg(${cronLogs.durationMs})` })
+		.select({ avg: sql<number>`avg(${cronLogs.durationMs})::int` })
 		.from(cronLogs)
 		.where(eq(cronLogs.status, "success"));
 
-	// 2. Subreddit Stats
+	// 3. Subreddit Stats
 	const subStats = await db.execute(sql`
         WITH latest_metrics AS (
             SELECT DISTINCT ON (subreddit_id)
@@ -44,14 +52,6 @@ export const getAdminStats = async () => {
         GROUP BY s.id, s.name, lm.weekly_visitors, lm.weekly_contributions
         ORDER BY data_points DESC
     `);
-
-	// 3. DB Health Check
-	let dbHealth = "Healthy";
-	try {
-		await db.execute(sql`SELECT 1`);
-	} catch (e) {
-		dbHealth = "Unreachable";
-	}
 
 	return {
 		cronStats: {

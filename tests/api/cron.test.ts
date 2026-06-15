@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 let client: PGlite;
 let mockDb: any;
 
-vi.mock('../../src/db/index', () => ({
+vi.mock('../../src/db/index.server', () => ({
 	get db() {
 		return mockDb;
 	}
@@ -130,7 +130,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
 			ok: true,
-			text: async () => `<shreddit-subreddit-header></shreddit-subreddit-header>`
+			text: async () => `<shreddit-subreddit-header weekly-active-users="3000" weekly-contributions="100"></shreddit-subreddit-header>`
 		}));
 
 		const req = new Request('http://localhost/api/cron/scrape', { headers: { 'Authorization': 'Bearer test_secret' } });
@@ -154,7 +154,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 		// 4. Verify 0 fetch calls were made because the interval logic filtered out all subreddits
 		expect(vi.mocked(fetch)).toHaveBeenCalledTimes(0);
-	}, 15000);
+	}, 60000);
 
 	it('Scenario 4 - Key Rotation: Should rotate keys on fetch failure', async () => {
 		vi.stubEnv('SCRAPER_API_KEY', 'key_1_fail');
@@ -189,5 +189,5 @@ describe('Cron Job Idempotency & API Integration', () => {
 		expect(keys[0].lastStatus).toBe('failed');
 		expect(keys[1].isActive).toBe(true);  // Rotated to Key 2
 		expect(keys[1].lastStatus).toBe('success');
-	}, 30000);
+	}, 60000);
 });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { getAdminStats } from '../../src/services/admin.service';
 
 // Mock DB
-vi.mock('../../src/db/index', () => ({
+vi.mock('../../src/db/index.server', () => ({
   db: { 
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
@@ -23,7 +23,7 @@ describe('Admin Functions', () => {
     // Instead of executing it fully which might require a request context, 
     // we'll mock the internals of DB since we already did that.
     
-    await import('../../src/db/index');
+    await import('../../src/db/index.server');
     
     const result = await getAdminStats();
     
