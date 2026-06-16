@@ -201,6 +201,19 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 
 		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+		const fetchWithTimeout = async (url: string, ms: number) => {
+			const controller = new AbortController();
+			const id = setTimeout(() => controller.abort(), ms);
+			try {
+				const response = await fetch(url, { signal: controller.signal });
+				clearTimeout(id);
+				return response;
+			} catch (e: any) {
+				clearTimeout(id);
+				return { ok: false, status: 408, statusText: "Request Timeout" } as Response;
+			}
+		};
+
 		// Batching by 5
 		let timeboxReached = false;
 		for (let i = 0; i < subs.length; i += 5) {
@@ -219,7 +232,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
 				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-				let response = await fetch(scraperUrl);
+				let response = await fetchWithTimeout(scraperUrl, 8000);
 
 				if (!response.ok) {
 					logger.warn("Cron", `Fetch failed for ${sub.name} with key index ${activeKeyRow!.keyIndex}`, { status: response.status });
@@ -244,7 +257,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 						
 						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-						response = await fetch(scraperUrl);
+						response = await fetchWithTimeout(scraperUrl, 8000);
 					}
 					
 					if (!response.ok) {
