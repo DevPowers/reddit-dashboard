@@ -17,7 +17,7 @@ export const subreddits = pgTable("subreddits", {
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
-});
+}).enableRLS();
 
 export const subredditsRelations = relations(subreddits, ({ many }) => ({
 	metrics: many(metricsHistory),
@@ -32,7 +32,7 @@ export const trackingGroups = pgTable("tracking_groups", {
 	arpuExpectation: varchar("arpu_expectation", { length: 50 }),
 	arpuMultiplier: real("arpu_multiplier").notNull().default(1.0),
 	population: integer("population"),
-});
+}).enableRLS();
 
 export const trackingGroupsRelations = relations(
 	trackingGroups,
@@ -56,7 +56,7 @@ export const subredditGroups = pgTable(
 			pk: primaryKey({ columns: [t.subredditId, t.groupId] }),
 		},
 	],
-);
+).enableRLS();
 
 export const subredditGroupsRelations = relations(
 	subredditGroups,
@@ -89,7 +89,7 @@ export const metricsHistory = pgTable(
 		index("recorded_at_idx").on(t.recordedAt),
 		index("subreddit_id_idx").on(t.subredditId),
 	],
-);
+).enableRLS();
 
 export const metricsHistoryRelations = relations(metricsHistory, ({ one }) => ({
 	subreddit: one(subreddits, {
@@ -104,7 +104,7 @@ export const cronLogs = pgTable("cron_logs", {
 	errorMessage: varchar("error_message", { length: 1000 }),
 	durationMs: integer("duration_ms"),
 	ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}).enableRLS();
 
 export const scraperKeys = pgTable("scraper_keys", {
 	id: serial("id").primaryKey(),
@@ -113,7 +113,7 @@ export const scraperKeys = pgTable("scraper_keys", {
 	lastStatus: varchar("last_status", { length: 50 }), // 'success' or 'failed'
 	lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
 	lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
-});
+}).enableRLS();
 
 export const platformHistoricalMetrics = pgTable("platform_historical_metrics", {
 	id: serial("id").primaryKey(),
@@ -124,4 +124,4 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	overallDauGrowthPercent: real("overall_dau_growth_percent").notNull().default(0),
 	overallNetNewDau: integer("overall_net_new_dau").notNull().default(0),
 	velocityIndexScore: real("velocity_index_score").notNull(),
-});
+}).enableRLS();
