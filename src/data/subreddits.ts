@@ -1,5 +1,20 @@
 import { ArpuExpectation, Category, type TrackedGroup } from "../types";
 
+// Only use premium ScraperAPI proxies for heavily-fortified default subreddits
+// to conserve API credits (costs 10-25 credits instead of 5).
+export const PREMIUM_PROXIED_SUBS = [
+    "AskReddit",
+    "movies",
+    "memes",
+    "gaming",
+    "funny",
+    "worldnews",
+    "todayilearned",
+    "aww",
+    "Music",
+    "Showerthoughts"
+];
+
 export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         category: Category.ADVERTISING_PLATFORMS,
         subCategory: "Reddit",

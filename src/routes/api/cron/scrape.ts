@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
 import { eq, gte, notInArray, asc, inArray, sql } from "drizzle-orm";
-import { TARGET_SUBREDDITS } from "../../../data/subreddits";
+import { TARGET_SUBREDDITS, PREMIUM_PROXIED_SUBS } from "../../../data/subreddits";
 import { db } from "../../../db/index.server";
 import {
 	cronLogs,
@@ -229,7 +229,10 @@ export const runScrapeCycle = async () => {
 
 			for (const sub of batch) {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
+				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+				if (PREMIUM_PROXIED_SUBS.includes(sub.name)) {
+					scraperUrl += "&premium=true";
+				}
 
 				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 				let response = await fetchWithTimeout(scraperUrl, 60000);
@@ -262,7 +265,10 @@ export const runScrapeCycle = async () => {
 						currentKeyRowId = fallbackKeyRow.id;
 						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
 						
-						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
+						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+						if (PREMIUM_PROXIED_SUBS.includes(sub.name)) {
+							scraperUrl += "&premium=true";
+						}
 						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 						response = await fetchWithTimeout(scraperUrl, 60000);
 					}
