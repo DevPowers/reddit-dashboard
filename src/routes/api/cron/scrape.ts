@@ -229,10 +229,10 @@ export const runScrapeCycle = async () => {
 
 			for (const sub of batch) {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
 
 				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-				let response = await fetchWithTimeout(scraperUrl, 15000);
+				let response = await fetchWithTimeout(scraperUrl, 60000);
 
 				if (!response.ok) {
 					logger.warn("Cron", `Fetch failed for ${sub.name} with key index ${activeKeyRow!.keyIndex}`, { status: response.status });
@@ -262,9 +262,9 @@ export const runScrapeCycle = async () => {
 						currentKeyRowId = fallbackKeyRow.id;
 						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
 						
-						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
 						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-						response = await fetchWithTimeout(scraperUrl, 15000);
+						response = await fetchWithTimeout(scraperUrl, 60000);
 					}
 					
 					if (!response.ok) {
