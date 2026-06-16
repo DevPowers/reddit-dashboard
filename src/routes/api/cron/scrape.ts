@@ -202,10 +202,19 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 		// Batching by 5
+		let timeboxReached = false;
 		for (let i = 0; i < subs.length; i += 5) {
+			if (timeboxReached) break;
 			const batch = subs.slice(i, i + 5);
 
 			for (const sub of batch) {
+				// Timebox constraint: Vercel Hobby limits execution to 60s. 
+				// We break out at 45s to allow graceful teardown and macro calculations.
+				if (Date.now() - startTime > 45000) {
+					logger.info("Cron", "Approaching Vercel execution timeout. Exiting gracefully to resume on next run.");
+					timeboxReached = true;
+					break;
+				}
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
@@ -298,10 +307,12 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		const finalStatus = failedCount > 0 ? "failed" : "success";
 		const errorMessage = failedCount > 0 ? `${failedCount} subreddits failed to fetch.` : null;
 
-		if (finalStatus === "failed") {
+		if (timeboxReached) {
+			logger.info("Cron", `Scrape cycle paused due to timebox. Processed ${results.filter(r => r.status === "success").length} subreddits this run. Will resume next hour.`);
+		} else if (finalStatus === "failed") {
 			logger.warn("Cron", "Scrape cycle completed with failures", { failedCount });
 		} else {
-			logger.info("Cron", "Scrape cycle completed successfully.");
+			logger.info("Cron", `Scrape cycle completely finished. Processed ${results.filter(r => r.status === "success").length} subreddits.`);
 		}
 
 		await db
