@@ -36,9 +36,28 @@ export const calculateAndSaveMacroMetrics = async () => {
 		)
 		.where(ne(trackingGroups.category, Category.PERSONAL_TRACKING));
 
+	// Pre-dedupe overlapping subreddits that exist in multiple tracking groups (e.g. r/gaming)
+	// For any given data point, we keep the one with the highest combined monetization rating
+	const dedupedMap = new Map<string, typeof data[0]>();
+	for (const row of data) {
+		const key = `${row.subredditId}-${new Date(row.recordedAt).getTime()}`;
+		const existing = dedupedMap.get(key);
+
+		if (!existing) {
+			dedupedMap.set(key, row);
+		} else {
+			const rowRating = row.monetizationWeight * row.arpuMultiplier;
+			const existingRating = existing.monetizationWeight * existing.arpuMultiplier;
+			if (rowRating > existingRating) {
+				dedupedMap.set(key, row);
+			}
+		}
+	}
+	const dedupedData = Array.from(dedupedMap.values());
+
 	// Pre-group all data by subredditId for O(1) lookups (fixes O(N²) filter/sort inside loop)
 	const dataBySubreddit = new Map<number, typeof data>();
-	for (const row of data) {
+	for (const row of dedupedData) {
 		if (!dataBySubreddit.has(row.subredditId)) {
 			dataBySubreddit.set(row.subredditId, []);
 		}
@@ -52,7 +71,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 
 	// 1. Find the latest data point per subreddit
 	const latestMap = new Map<number, typeof data[0]>();
-	for (const row of data) {
+	for (const row of dedupedData) {
 		const existing = latestMap.get(row.subredditId);
 		if (!existing || new Date(row.recordedAt) > new Date(existing.recordedAt)) {
 			latestMap.set(row.subredditId, row);
@@ -64,7 +83,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const T0_DATE = getQuarterEndBaseline(new Date());
 	const historicalMap = new Map<number, typeof data[0]>();
 
-	for (const row of data) {
+	for (const row of dedupedData) {
 		const recordedAtDate = new Date(row.recordedAt);
 		if (recordedAtDate <= T0_DATE) {
 			const currentHistorical = historicalMap.get(row.subredditId);
@@ -79,7 +98,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 
 	// Fallback: if no data before T0 for a subreddit, use its earliest record
 	const earliestPerSub = new Map<number, typeof data[0]>();
-	for (const row of data) {
+	for (const row of dedupedData) {
 		const currentEarliest = earliestPerSub.get(row.subredditId);
 		if (
 			!currentEarliest ||
