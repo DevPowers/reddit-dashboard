@@ -201,6 +201,13 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 
 		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+		// Shuffle the subs array so that subreddits at the end of the list 
+		// don't get starved if earlier subreddits consistently timeout and consume the timebox
+		for (let i = subs.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[subs[i], subs[j]] = [subs[j], subs[i]];
+		}
+
 		const fetchWithTimeout = async (url: string, ms: number) => {
 			const controller = new AbortController();
 			const id = setTimeout(() => controller.abort(), ms);
@@ -237,10 +244,17 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				if (!response.ok) {
 					logger.warn("Cron", `Fetch failed for ${sub.name} with key index ${activeKeyRow!.keyIndex}`, { status: response.status });
 					
-					// Mark current key as failed
-					await db.update(scraperKeys)
-						.set({ lastErrorAt: new Date(), lastStatus: "failed" })
-						.where(eq(scraperKeys.id, currentKeyRowId));
+					// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
+					if (response.status === 429 || response.status === 403) {
+						await db.update(scraperKeys)
+							.set({ lastErrorAt: new Date(), lastStatus: "failed" })
+							.where(eq(scraperKeys.id, currentKeyRowId));
+					} else {
+						// For 408 Timeouts or 500s, just log the failure but keep the key alive in the pool
+						await db.update(scraperKeys)
+							.set({ lastStatus: "failed" })
+							.where(eq(scraperKeys.id, currentKeyRowId));
+					}
 						
 					// Attempt Rotation
 					const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
