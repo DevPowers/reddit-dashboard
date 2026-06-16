@@ -4,6 +4,10 @@ dotenv.config();
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
+if (process.env.NODE_ENV === "test") {
+    throw new Error("FATAL: Attempted to connect to the real Postgres database during a Vitest run. Mocks are misconfigured or leaky imports occurred.");
+}
 import * as schema from "./schema";
 
 if (!process.env.DATABASE_URL) {

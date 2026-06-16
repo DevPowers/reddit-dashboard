@@ -5,7 +5,7 @@ import { TARGET_SUBREDDITS } from '../../src/data/subreddits';
 import { Category } from '../../src/types';
 
 // Mock DB to prevent postgres from connecting during imports
-vi.mock('../../src/db/index', () => ({
+vi.mock('../../src/db/index.server', () => ({
   db: { select: vi.fn() }
 }));
 

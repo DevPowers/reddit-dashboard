@@ -2,6 +2,7 @@ export enum Category {
 	ADVERTISING_PLATFORMS = "advertising_platforms",
 	HIGH_VALUE_AD_VERTICALS = "high_value_ad_verticals",
 	GEOGRAPHY = "geography",
+	WORLD_GROWTH = "world_growth",
 	PERSONAL_TRACKING = "personal_tracking",
 }
 

@@ -28,6 +28,25 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         arpuMultiplier: 1.0,
         subreddits: ["FulfillmentByAmazon"],
     },
+    {
+        category: Category.WORLD_GROWTH,
+        subCategory: "Top 10 Defaults",
+        monetizationWeight: 1.0,
+        arpuExpectation: ArpuExpectation.MEDIUM,
+        arpuMultiplier: 0.8,
+        subreddits: [
+            "AskReddit",
+            "funny",
+            "worldnews",
+            "gaming",
+            "todayilearned",
+            "aww",
+            "Music",
+            "movies",
+            "memes",
+            "Showerthoughts"
+        ],
+    },
 
     // ==========================================
     // --- 2. HIGH VALUE AD VERTICALS ---

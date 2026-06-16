@@ -130,7 +130,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 		vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
 			ok: true,
-			text: async () => `<shreddit-subreddit-header weekly-active-users="3000" weekly-contributions="100"></shreddit-subreddit-header>`
+			text: async () => `<shreddit-subreddit-header weekly-active-users="3500" weekly-contributions="120"></shreddit-subreddit-header>`
 		}));
 
 		const req = new Request('http://localhost/api/cron/scrape', { headers: { 'Authorization': 'Bearer test_secret' } });
@@ -174,7 +174,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 			}
 			return {
 				ok: true,
-				text: async () => `<shreddit-subreddit-header weekly-active-users="3000" weekly-contributions="100"></shreddit-subreddit-header>`
+				text: async () => `<shreddit-subreddit-header weekly-active-users="3500" weekly-contributions="120"></shreddit-subreddit-header>`
 			};
 		}));
 

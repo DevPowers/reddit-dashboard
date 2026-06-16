@@ -254,16 +254,18 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				const $ = cheerio.load(html);
 
 				const header = $("shreddit-subreddit-header");
-				const weekly_visitors = parseInt(
-					header.attr("weekly-active-users") || "0",
-					10,
-				);
-				const weekly_contributions = parseInt(
-					header.attr("weekly-contributions") || "0",
-					10,
-				);
+				const wauAttr = header.attr("weekly-active-users");
+				const wcAttr = header.attr("weekly-contributions");
+				const weekly_visitors = Number(wauAttr);
+				const weekly_contributions = Number(wcAttr);
 
-				if (weekly_visitors === 0 && weekly_contributions === 0) {
+				// Placeholder Validation Guard: Reddit's new web components serve a generic 3000/100 placeholder 
+				// if the scraper is blocked from executing the client-side GraphQL hydration.
+				if (weekly_visitors === 3000 && weekly_contributions === 100) {
+					throw new Error("Anti-Bot Detection: ScraperAPI returned Reddit's generic un-hydrated placeholder (3000/100).");
+				}
+
+				if (isNaN(weekly_visitors) || isNaN(weekly_contributions) || (weekly_visitors === 0 && weekly_contributions === 0)) {
 					logger.warn("Cron", `Missing or zero metrics for ${sub.name}. DOM may have changed or page didn't fully render.`);
 					results.push({
 						name: sub.name,
