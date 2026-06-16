@@ -239,7 +239,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
 				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-				let response = await fetchWithTimeout(scraperUrl, 8000);
+				let response = await fetchWithTimeout(scraperUrl, 15000);
 
 				if (!response.ok) {
 					logger.warn("Cron", `Fetch failed for ${sub.name} with key index ${activeKeyRow!.keyIndex}`, { status: response.status });
@@ -271,7 +271,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 						
 						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-						response = await fetchWithTimeout(scraperUrl, 8000);
+						response = await fetchWithTimeout(scraperUrl, 15000);
 					}
 					
 					if (!response.ok) {
