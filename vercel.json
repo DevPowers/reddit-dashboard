@@ -3,11 +3,5 @@
     "**/*": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/scrape",
-      "schedule": "0 * * * *"
-    }
-  ]
+  }
 }

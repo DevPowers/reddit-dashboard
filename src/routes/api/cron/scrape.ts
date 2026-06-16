@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, gte, notInArray, asc, inArray } from "drizzle-orm";
+import { eq, gte, notInArray, asc, inArray, sql } from "drizzle-orm";
 import { TARGET_SUBREDDITS } from "../../../data/subreddits";
 import { db } from "../../../db/index.server";
 import {
@@ -14,18 +14,7 @@ import {
 import { logger } from "../../../lib/logger";
 import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
 
-export const scrapeHandler = async ({ request }: { request: Request }) => {
-	const CRON_SECRET = process.env.CRON_SECRET;
-
-	if (!CRON_SECRET) {
-		logger.error("Cron", "Missing CRON_SECRET environment variable. Aborting to prevent unauthorized access.");
-		return Response.json({ error: "Server Configuration Error" }, { status: 500 });
-	}
-
-	const authHeader = request.headers.get("authorization");
-	if (authHeader !== `Bearer ${CRON_SECRET}`) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
-	}
+export const runScrapeCycle = async () => {
 
 	// Extract available keys from env
 	const envKeys = [
@@ -36,10 +25,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 
 	if (envKeys.length === 0) {
 		logger.error("Cron", "Missing SCRAPER_API_KEY_X environment variables.");
-		return Response.json(
-			{ error: "Missing SCRAPER_API_KEY_X environment variables." },
-			{ status: 500 },
-		);
+		throw new Error("Missing SCRAPER_API_KEY_X environment variables.");
 	}
 	const [log] = await db
 		.insert(cronLogs)
@@ -87,62 +73,78 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		let currentKeyString = envKeys[activeKeyRow.keyIndex - 1];
 		let currentKeyRowId = activeKeyRow.id;
 
-		// --- 1. Auto-Sync Database with TARGET_SUBREDDITS ---
-		const expectedSubNames = new Set<string>();
+		// --- 1. Auto-Sync Database with TARGET_SUBREDDITS (Bulk Optimized) ---
+		const groupsToInsert = [];
+		const subsToInsert: { name: string }[] = [];
+		const groupNameToSubsMap = new Map<string, string[]>();
 		const expectedGroupSubCategories = new Set<string>();
+		const expectedSubNames = new Set<string>();
 
 		for (const group of TARGET_SUBREDDITS) {
 			expectedGroupSubCategories.add(group.subCategory);
-
-			// Upsert Group
-			const [insertedGroup] = await db
-				.insert(trackingGroups)
-				.values({
-					category: group.category,
-					subCategory: group.subCategory,
-					monetizationWeight: group.monetizationWeight,
-					arpuExpectation: group.arpuExpectation,
-					arpuMultiplier: group.arpuMultiplier,
-					population: group.population,
-				})
-				.onConflictDoUpdate({
-					target: trackingGroups.subCategory,
-					set: {
-						category: group.category,
-						monetizationWeight: group.monetizationWeight,
-						arpuExpectation: group.arpuExpectation,
-						arpuMultiplier: group.arpuMultiplier,
-						population: group.population,
-					},
-				})
-				.returning({ id: trackingGroups.id });
-
-			const groupId = insertedGroup.id;
-
+			groupsToInsert.push({
+				category: group.category,
+				subCategory: group.subCategory,
+				monetizationWeight: group.monetizationWeight,
+				arpuExpectation: group.arpuExpectation,
+				arpuMultiplier: group.arpuMultiplier,
+				population: group.population,
+			});
+			groupNameToSubsMap.set(group.subCategory, group.subreddits);
 			for (const sub of group.subreddits) {
 				expectedSubNames.add(sub);
-
-				// Upsert Subreddit
-				const [insertedSub] = await db
-					.insert(subreddits)
-					.values({
-						name: sub,
-					})
-					.onConflictDoUpdate({
-						target: subreddits.name,
-						set: { name: sub }, // Dummy update to get the returning ID
-					})
-					.returning({ id: subreddits.id });
-
-				// Upsert Membership
-				await db
-					.insert(subredditGroups)
-					.values({
-						subredditId: insertedSub.id,
-						groupId: groupId,
-					})
-					.onConflictDoNothing(); // If it already exists, do nothing
+				subsToInsert.push({ name: sub });
 			}
+		}
+
+		// Deduplicate subreddits before bulk insert
+		const uniqueSubs = Array.from(expectedSubNames).map(name => ({ name }));
+
+		const insertedGroups = await db
+			.insert(trackingGroups)
+			.values(groupsToInsert)
+			.onConflictDoUpdate({
+				target: trackingGroups.subCategory,
+				set: {
+					category: sql`EXCLUDED.category`,
+					monetizationWeight: sql`EXCLUDED.monetization_weight`,
+					arpuExpectation: sql`EXCLUDED.arpu_expectation`,
+					arpuMultiplier: sql`EXCLUDED.arpu_multiplier`,
+					population: sql`EXCLUDED.population`,
+				},
+			})
+			.returning({ id: trackingGroups.id, subCategory: trackingGroups.subCategory });
+
+		const insertedSubs = await db
+			.insert(subreddits)
+			.values(uniqueSubs)
+			.onConflictDoUpdate({
+				target: subreddits.name,
+				set: { name: sql`EXCLUDED.name` },
+			})
+			.returning({ id: subreddits.id, name: subreddits.name });
+
+		const groupMap = new Map(insertedGroups.map(g => [g.subCategory, g.id]));
+		const subMap = new Map(insertedSubs.map(s => [s.name, s.id]));
+		const membershipsToInsert = [];
+
+		for (const [subCategory, subNames] of groupNameToSubsMap.entries()) {
+			const groupId = groupMap.get(subCategory);
+			if (groupId) {
+				for (const name of subNames) {
+					const subId = subMap.get(name);
+					if (subId) {
+						membershipsToInsert.push({ subredditId: subId, groupId });
+					}
+				}
+			}
+		}
+
+		if (membershipsToInsert.length > 0) {
+			await db
+				.insert(subredditGroups)
+				.values(membershipsToInsert)
+				.onConflictDoNothing();
 		}
 
 		if (expectedGroupSubCategories.size > 0) {
@@ -158,7 +160,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		}
 
 		if (expectedSubNames.size > 0) {
-			// Prune removed subreddits from active tracking groups (keeps historical data in subreddits table)
+			// Prune removed subreddits from active tracking groups
 			const trackedSubs = await db
 				.select({ id: subreddits.id })
 				.from(subreddits)
@@ -222,19 +224,10 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		};
 
 		// Batching by 5
-		let timeboxReached = false;
 		for (let i = 0; i < subs.length; i += 5) {
-			if (timeboxReached) break;
 			const batch = subs.slice(i, i + 5);
 
 			for (const sub of batch) {
-				// Timebox constraint: Vercel Hobby limits execution to 60s. 
-				// We break out at 45s to allow graceful teardown and macro calculations.
-				if (Date.now() - startTime > 45000) {
-					logger.info("Cron", "Approaching Vercel execution timeout. Exiting gracefully to resume on next run.");
-					timeboxReached = true;
-					break;
-				}
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
@@ -334,9 +327,7 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 		const finalStatus = failedCount > 0 ? "failed" : "success";
 		const errorMessage = failedCount > 0 ? `${failedCount} subreddits failed to fetch.` : null;
 
-		if (timeboxReached) {
-			logger.info("Cron", `Scrape cycle paused due to timebox. Processed ${results.filter(r => r.status === "success").length} subreddits this run. Will resume next hour.`);
-		} else if (finalStatus === "failed") {
+		if (finalStatus === "failed") {
 			logger.warn("Cron", "Scrape cycle completed with failures", { failedCount });
 		} else {
 			logger.info("Cron", `Scrape cycle completely finished. Processed ${results.filter(r => r.status === "success").length} subreddits.`);
@@ -361,10 +352,10 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 			}
 		}
 
-		return Response.json({
+		return {
 			message: finalStatus === "success" ? "Scraping cycle completed." : "Scraping cycle completed with some errors.",
 			results,
-		});
+		};
 	} catch (e: any) {
 		logger.error("Cron", "Critical error in scrape handler", e);
 		await db
@@ -375,6 +366,27 @@ export const scrapeHandler = async ({ request }: { request: Request }) => {
 				durationMs: Date.now() - startTime,
 			})
 			.where(eq(cronLogs.id, log.id));
+		throw e;
+	}
+};
+
+export const scrapeHandler = async ({ request }: { request: Request }) => {
+	const CRON_SECRET = process.env.CRON_SECRET;
+
+	if (!CRON_SECRET) {
+		logger.error("Cron", "Missing CRON_SECRET environment variable. Aborting to prevent unauthorized access.");
+		return Response.json({ error: "Server Configuration Error" }, { status: 500 });
+	}
+
+	const authHeader = request.headers.get("authorization");
+	if (authHeader !== `Bearer ${CRON_SECRET}`) {
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
+	}
+
+	try {
+		const results = await runScrapeCycle();
+		return Response.json(results);
+	} catch (e: any) {
 		return Response.json({ error: e.message }, { status: 500 });
 	}
 };
