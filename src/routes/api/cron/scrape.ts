@@ -246,7 +246,7 @@ export const runScrapeCycle = async () => {
 			for (const sub of batch) {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
-				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
+				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 				if (usePremium) {
 					scraperUrl += "&premium=true";
 				}
@@ -269,30 +269,37 @@ export const runScrapeCycle = async () => {
 							.where(eq(scraperKeys.id, currentKeyRowId));
 					}
 						
-					// Attempt Rotation
-					const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
-					const fallbackKeyRow = allKeys.find(k => k.id !== currentKeyRowId && (!k.lastErrorAt || new Date(k.lastErrorAt) <= new Date(Date.now() - 24 * 60 * 60 * 1000)));
-					
-					if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
-						logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
-						await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
-						await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
+					// Attempt Rotation ONLY if we hit a quota/rate limit error
+					let fallbackUsed = false;
+					if (response.status === 429 || response.status === 403) {
+						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+						const fallbackKeyRow = allKeys.find(k => k.id !== currentKeyRowId && (!k.lastErrorAt || new Date(k.lastErrorAt) <= new Date(Date.now() - 24 * 60 * 60 * 1000)));
 						
-						activeKeyRow = fallbackKeyRow;
-						currentKeyRowId = fallbackKeyRow.id;
-						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
-						
-						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
-						const fallbackUsePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
-						if (fallbackUsePremium) {
-							scraperUrl += "&premium=true";
+						if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
+							logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
+							await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
+							await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
+							
+							activeKeyRow = fallbackKeyRow;
+							currentKeyRowId = fallbackKeyRow.id;
+							currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
+							
+							scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+							const fallbackUsePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
+							if (fallbackUsePremium) {
+								scraperUrl += "&premium=true";
+							}
+							await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
+							response = await fetchWithTimeout(scraperUrl, 60000);
+							fallbackUsed = true;
 						}
-						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-						response = await fetchWithTimeout(scraperUrl, 60000);
 					}
 					
 					if (!response.ok) {
-						logger.error("Cron", `Fallback fetch failed for ${sub.name}`);
+						if (fallbackUsed) {
+							logger.error("Cron", `Fallback fetch failed for ${sub.name}`);
+						}
+						
 						results.push({
 							name: sub.name,
 							status: "failed",
@@ -335,7 +342,7 @@ export const runScrapeCycle = async () => {
 					continue;
 				}
 
-				const usedPremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
+				const usedPremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 				await db.insert(metricsHistory).values({
 					subredditId: sub.id,
 					weeklyVisitors: weekly_visitors,

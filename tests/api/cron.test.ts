@@ -208,14 +208,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 		let updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
 		expect(updatedSub[0].consecutiveFailures).toBe(1);
 
-		// Run 2: Fails again
-		request = new Request('http://localhost:3000/api/cron/scrape', { headers: { 'authorization': 'Bearer test_secret' } });
-		await scrapeHandler({ request });
-
-		updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
-		expect(updatedSub[0].consecutiveFailures).toBe(2);
-
-		// Run 3: The script should now append premium=true, and we mock success!
+		// Run 2: The script should now append premium=true, and we mock success!
 		mockFetch = vi.fn().mockImplementation((url) => {
 			if (url.includes('&premium=true')) {
 				return Promise.resolve({
