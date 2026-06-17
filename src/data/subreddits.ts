@@ -133,6 +133,20 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         arpuMultiplier: 1.0,
         subreddits: ["nfl", "nba", "baseball"],
     },
+    {
+        category: Category.HIGH_VALUE_AD_VERTICALS,
+        subCategory: "Fitness & Active Lifestyles",
+        monetizationWeight: 4.5,
+        arpuMultiplier: 1.0,
+        subreddits: ["Fitness", "bodyweightfitness", "swimming", "cycling", "running", "golf", "bicycling"],
+    },
+    {
+        category: Category.HIGH_VALUE_AD_VERTICALS,
+        subCategory: "Audiophile & AV",
+        monetizationWeight: 3.5,
+        arpuMultiplier: 1.0,
+        subreddits: ["audiophile", "hometheater", "headphones"],
+    },
 
     // ==========================================
     // --- 3. GEOGRAPHY: HIGH ARPU ---

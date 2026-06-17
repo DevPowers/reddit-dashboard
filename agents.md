@@ -205,3 +205,6 @@ export function RouteComponent() {
 - **No Leaky Server Functions**: Standard, non-RPC server functions (e.g., standard async functions using `db` or Node-native modules like `Buffer`) MUST NOT be exported from files that are imported by client components (even if those files also contain `createServerFn` exports). 
 - **Dead Code Elimination Limits**: The TanStack bundler only guarantees dead code elimination for functions explicitly wrapped in `createServerFn`. If a non-RPC function is exported from an isomorphic file, its dependencies may leak into the client bundle and cause fatal browser crashes (`ReferenceError: Buffer is not defined`).
 - **Resolution**: Place any non-RPC server logic into strictly isolated `.server.ts` or distinct backend-only files (e.g., `src/functions/macro.ts`) that are never imported by the client.
+
+## Git & Deployment Protocol
+- **No Automatic Pushing**: Never run `git push` automatically without explicit permission. Only push code when the user explicitly asks you to push. Always provide a walkthrough or diff of changes before requesting to push.

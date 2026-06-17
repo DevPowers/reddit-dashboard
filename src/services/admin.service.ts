@@ -1,6 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "../db/index.server";
 import { cronLogs } from "../db/schema";
+import { TARGET_SUBREDDITS } from "../data/subreddits";
 
 export const getAdminStats = async () => {
 	// 1. DB Health Check
@@ -26,7 +27,7 @@ export const getAdminStats = async () => {
 		.from(cronLogs)
 		.where(eq(cronLogs.status, "success"));
 
-	// 3. Subreddit Stats
+	// 3. Subreddit Stats from DB
 	const subStats = await db.execute(sql`
         WITH latest_metrics AS (
             SELECT DISTINCT ON (subreddit_id)
@@ -37,21 +38,46 @@ export const getAdminStats = async () => {
             ORDER BY subreddit_id, recorded_at DESC
         )
         SELECT 
-            s.id, 
             s.name, 
-            COALESCE(STRING_AGG(DISTINCT tg.category, ', '), 'Uncategorized') as category,
             CAST(COUNT(DISTINCT m.id) AS INTEGER) as data_points, 
             MAX(m.recorded_at) as last_updated,
             lm.weekly_visitors as latest_visitors,
             lm.weekly_contributions as latest_contributions
         FROM subreddits s
         LEFT JOIN metrics_history m ON s.id = m.subreddit_id
-        INNER JOIN subreddit_groups sg ON s.id = sg.subreddit_id
-        INNER JOIN tracking_groups tg ON sg.group_id = tg.id
         LEFT JOIN latest_metrics lm ON s.id = lm.subreddit_id
         GROUP BY s.id, s.name, lm.weekly_visitors, lm.weekly_contributions
-        ORDER BY data_points DESC
     `);
+
+	// 4. Merge Static Source of Truth with DB Stats
+	const dbStatsMap = new Map(subStats.map((s: any) => [s.name, s]));
+	
+	const mergedSubreddits: any[] = [];
+	for (const group of TARGET_SUBREDDITS) {
+		for (const subName of group.subreddits) {
+			// Avoid duplicates if a subreddit is in multiple groups
+			if (mergedSubreddits.some(s => s.name === subName)) continue;
+
+			const dbStat = dbStatsMap.get(subName);
+			mergedSubreddits.push({
+				id: dbStat?.id || Math.random(), // React key fallback
+				name: subName,
+				category: group.category,
+				data_points: dbStat?.data_points || 0,
+				last_updated: dbStat?.last_updated || null,
+				latest_visitors: dbStat?.latest_visitors || null,
+				latest_contributions: dbStat?.latest_contributions || null,
+			});
+		}
+	}
+
+	// Sort by data_points descending, then alphabetically
+	mergedSubreddits.sort((a, b) => {
+		if (b.data_points !== a.data_points) {
+			return b.data_points - a.data_points;
+		}
+		return a.name.localeCompare(b.name);
+	});
 
 	return {
 		cronStats: {
@@ -59,7 +85,7 @@ export const getAdminStats = async () => {
 			lastRun: lastCron[0] || null,
 			avgDurationMs: avgDurationResult[0]?.avg || null,
 		},
-		subreddits: subStats as any[],
+		subreddits: mergedSubreddits,
 		dbHealth,
 	};
 };
