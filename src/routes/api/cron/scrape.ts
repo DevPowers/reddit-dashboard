@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, gte, notInArray, asc, inArray, sql } from "drizzle-orm";
+import { eq, gte, notInArray, asc, inArray, sql, and, lt } from "drizzle-orm";
 import { TARGET_SUBREDDITS, PREMIUM_PROXIED_SUBS } from "../../../data/subreddits";
 import { db } from "../../../db/index.server";
 import {
@@ -29,6 +29,20 @@ export const runScrapeCycle = async () => {
 		logger.error("Cron", "Missing SCRAPER_API_KEY_X environment variables.");
 		throw new Error("Missing SCRAPER_API_KEY_X environment variables.");
 	}
+	// --- Self-Healing: Clean up orphaned jobs ---
+	// If a previous Node process was abruptly killed (e.g. Vercel timeout, OOM, or manual kill),
+	// it will be stuck in 'running' forever. Any running job older than 2 hours is dead.
+	const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	await db
+		.update(cronLogs)
+		.set({ status: "failed", errorMessage: "Process abruptly killed/timeout", durationMs: 0 })
+		.where(
+			and(
+				eq(cronLogs.status, "running"),
+				lt(cronLogs.ranAt, twoHoursAgo)
+			)
+		);
+
 	const [log] = await db
 		.insert(cronLogs)
 		.values({ status: "running" })
