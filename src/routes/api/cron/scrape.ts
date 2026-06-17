@@ -196,7 +196,7 @@ export const runScrapeCycle = async () => {
 
 		// --- 2. Fetch Sync'd Subs and Scrape ---
 		const allSubs = await db
-			.selectDistinct({ id: subreddits.id, name: subreddits.name })
+			.selectDistinct({ id: subreddits.id, name: subreddits.name, consecutiveFailures: subreddits.consecutiveFailures })
 			.from(subreddits)
 			.innerJoin(subredditGroups, eq(subreddits.id, subredditGroups.subredditId));
 		
@@ -246,7 +246,8 @@ export const runScrapeCycle = async () => {
 			for (const sub of batch) {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
-				if (PREMIUM_PROXIED_SUBS.includes(sub.name)) {
+				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
+				if (usePremium) {
 					scraperUrl += "&premium=true";
 				}
 
@@ -282,7 +283,8 @@ export const runScrapeCycle = async () => {
 						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
 						
 						scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
-						if (PREMIUM_PROXIED_SUBS.includes(sub.name)) {
+						const fallbackUsePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
+						if (fallbackUsePremium) {
 							scraperUrl += "&premium=true";
 						}
 						await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
@@ -296,6 +298,13 @@ export const runScrapeCycle = async () => {
 							status: "failed",
 							error: response.statusText,
 						});
+						
+						// Increment consecutiveFailures if it's not a quota/rate limit error
+						if (response.status !== 403 && response.status !== 429) {
+							await db.update(subreddits)
+								.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
+								.where(eq(subreddits.id, sub.id));
+						}
 						continue;
 					}
 				}
@@ -326,11 +335,18 @@ export const runScrapeCycle = async () => {
 					continue;
 				}
 
+				const usedPremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 2;
 				await db.insert(metricsHistory).values({
 					subredditId: sub.id,
 					weeklyVisitors: weekly_visitors,
 					weeklyContributions: weekly_contributions,
+					usedPremium: usedPremium,
 				});
+
+				// Reset failures on success
+				if (sub.consecutiveFailures > 0) {
+					await db.update(subreddits).set({ consecutiveFailures: 0 }).where(eq(subreddits.id, sub.id));
+				}
 
 				results.push({
 					name: sub.name,

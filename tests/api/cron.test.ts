@@ -101,6 +101,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 			subredditId: mexicoSub.id,
 			weeklyVisitors: 9999, // Fake specific number to trace
 			weeklyContributions: 10,
+			usedPremium: false,
 			recordedAt: twoHoursAgo
 		});
 
@@ -190,4 +191,63 @@ describe('Cron Job Idempotency & API Integration', () => {
 		expect(keys[1].isActive).toBe(true);  // Rotated to Key 2
 		expect(keys[1].lastStatus).toBe('success');
 	}, 60000);
+
+	it('Scenario 5 - Dynamic Premium Upgrade: Should track failures and dynamically upgrade to premium', async () => {
+		vi.stubEnv('SCRAPER_API_KEY_1', 'fake_key');
+		vi.stubEnv('CRON_SECRET', 'test_secret');
+		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '0'); // Force scrape every run
+
+		// We will use the 'mexico' subreddit which is naturally seeded by the script
+		// Run 1: Fails
+		let mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Timeout" });
+		vi.stubGlobal('fetch', mockFetch);
+
+		let request = new Request('http://localhost:3000/api/cron/scrape', { headers: { 'authorization': 'Bearer test_secret' } });
+		await scrapeHandler({ request });
+
+		let updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
+		expect(updatedSub[0].consecutiveFailures).toBe(1);
+
+		// Run 2: Fails again
+		request = new Request('http://localhost:3000/api/cron/scrape', { headers: { 'authorization': 'Bearer test_secret' } });
+		await scrapeHandler({ request });
+
+		updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
+		expect(updatedSub[0].consecutiveFailures).toBe(2);
+
+		// Run 3: The script should now append premium=true, and we mock success!
+		mockFetch = vi.fn().mockImplementation((url) => {
+			if (url.includes('&premium=true')) {
+				return Promise.resolve({
+					ok: true,
+					text: async () => `<html><body><shreddit-subreddit-header weekly-active-users="2000" weekly-contributions="50"></shreddit-subreddit-header></body></html>`
+				});
+			}
+			return Promise.resolve({ ok: false, status: 500, statusText: "Timeout" });
+		});
+		vi.stubGlobal('fetch', mockFetch);
+
+		request = new Request('http://localhost:3000/api/cron/scrape', { headers: { 'authorization': 'Bearer test_secret' } });
+		const response = await scrapeHandler({ request });
+
+		expect(response.status).toBe(200);
+
+		// Verify fetch was called with premium=true for mexico
+		const fetchCalls = mockFetch.mock.calls;
+		const callForSub = fetchCalls.find(call => call[0].includes('mexico'));
+		expect(callForSub).toBeDefined();
+		expect(callForSub[0]).toContain('&premium=true');
+
+		// Verify database reset consecutiveFailures to 0
+		updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
+		expect(updatedSub[0].consecutiveFailures).toBe(0);
+
+		// Verify metric was tracked with usedPremium = true
+		const metric = await mockDb.select().from(metricsHistory).where(eq(metricsHistory.subredditId, updatedSub[0].id));
+		expect(metric.length).toBeGreaterThan(0);
+		// Since there are 160 subreddits and we mocked them all to fail except when premium=true
+		// mexico will be one of the few with a metric, so we sort or just check the first one.
+		expect(metric[0].usedPremium).toBe(true);
+	}, 60000);
 });
+

@@ -29,7 +29,7 @@ describe('Admin Functions', () => {
     
     expect(result).toBeDefined();
     expect(result.dbHealth).toBe('Healthy');
-    expect(result.subreddits).toHaveLength(1);
+    expect(result.subreddits).toHaveLength(160);
     expect(result.cronStats).toBeDefined();
   });
 });

@@ -14,6 +14,7 @@ import {
 export const subreddits = pgTable("subreddits", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 255 }).notNull().unique(),
+	consecutiveFailures: integer("consecutive_failures").default(0).notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
@@ -81,6 +82,7 @@ export const metricsHistory = pgTable(
 			.notNull(),
 		weeklyVisitors: integer("weekly_visitors").notNull(),
 		weeklyContributions: integer("weekly_contributions").notNull(),
+		usedPremium: boolean("used_premium").default(false).notNull(),
 		recordedAt: timestamp("recorded_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
