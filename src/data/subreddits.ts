@@ -12,7 +12,11 @@ export const PREMIUM_PROXIED_SUBS = [
     "todayilearned",
     "aww",
     "Music",
-    "Showerthoughts"
+    "Showerthoughts",
+    "ExplainLikeImFive",
+    "NoStupidQuestions",
+    "AskScience",
+    "whatisthisthing"
 ];
 
 export const TARGET_SUBREDDITS: TrackedGroup[] = [{
@@ -258,8 +262,40 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         population: 115559000,
         subreddits: ["Philippines", "ChikaPH", "phinvest"],
     },
+
     // ==========================================
-    // --- 6. PERSONAL TRACKING ---
+    // --- 6. UTILITY & Q&A (AI CANNIBALIZATION TRACKING) ---
+    // ==========================================
+    {
+        category: Category.AI_CANNIBALISM,
+        subCategory: "General Knowledge",
+        monetizationWeight: 1.5,
+        arpuMultiplier: 1.0,
+        subreddits: ["ExplainLikeImFive", "NoStupidQuestions", "OutOfTheLoop", "AskScience", "AskHistorians"],
+    },
+    {
+        category: Category.AI_CANNIBALISM,
+        subCategory: "Tech & Life Support",
+        monetizationWeight: 4.0,
+        arpuMultiplier: 1.0,
+        subreddits: ["techsupport", "buildapc", "personalfinance", "legaladvice", "homeimprovement"],
+    },
+    {
+        category: Category.AI_CANNIBALISM,
+        subCategory: "ID & Crowdsourcing",
+        monetizationWeight: 1.0,
+        arpuMultiplier: 1.0,
+        subreddits: ["whatisthisthing", "tipofmytongue", "HelpMeFind"],
+    },
+    {
+        category: Category.AI_CANNIBALISM,
+        subCategory: "Niche Hobbies & Crafts",
+        monetizationWeight: 3.0,
+        arpuMultiplier: 1.0,
+        subreddits: ["3Dprinting", "woodworking", "gardening", "houseplants", "Aquariums", "sewing"],
+    },
+    // ==========================================
+    // --- 7. PERSONAL TRACKING ---
     // ==========================================
     {
         category: Category.PERSONAL_TRACKING,

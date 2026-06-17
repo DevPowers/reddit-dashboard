@@ -3,6 +3,7 @@ export enum Category {
 	HIGH_VALUE_AD_VERTICALS = "high_value_ad_verticals",
 	GEOGRAPHY = "geography",
 	WORLD_GROWTH = "world_growth",
+	AI_CANNIBALISM = "ai_cannibalism",
 	PERSONAL_TRACKING = "personal_tracking",
 }
 
