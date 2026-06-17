@@ -186,7 +186,7 @@ export const runScrapeCycle = async () => {
 			.innerJoin(subredditGroups, eq(subreddits.id, subredditGroups.subredditId));
 		
 		// Find which subreddits have already been scraped within the interval
-		const scrapeIntervalDays = parseInt(process.env.SCRAPE_INTERVAL_DAYS || "4", 10);
+		const scrapeIntervalDays = parseInt(process.env.SCRAPE_INTERVAL_DAYS || "12", 10);
 		// Subtract a 12 hour wiggle room from the interval to prevent drift issues
 		// E.g., if interval is 3 days (72 hours), cutoff is 60 hours ago.
 		const cutoffHours = (scrapeIntervalDays * 24) - 12;
