@@ -19,11 +19,11 @@ export const Route = createFileRoute("/api/reddit/$subreddit")({
 						}
 					}
 
-					const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
+					const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY_1;
 
 					if (!SCRAPER_API_KEY) {
 						return Response.json(
-							{ error: "Missing SCRAPER_API_KEY environment variable." },
+							{ error: "Missing SCRAPER_API_KEY_1 environment variable." },
 							{ status: 500 },
 						);
 					}
