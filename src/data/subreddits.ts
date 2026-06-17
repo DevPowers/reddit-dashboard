@@ -103,7 +103,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         subCategory: "Financial Services",
         monetizationWeight: 4.5,
         arpuMultiplier: 1.0,
-        subreddits: ["personalfinance", "CreditCards", "investing", "FirstTimeHomeBuyer", "RealEstate", "amex", "Chase"],
+        subreddits: ["personalfinance", "CreditCards", "investing", "stocks", "Bogleheads", "dividends", "FirstTimeHomeBuyer", "RealEstate", "amex", "Chase"],
     },
     {
         category: Category.HIGH_VALUE_AD_VERTICALS,
@@ -117,7 +117,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         subCategory: "Retail Trading & Speculation",
         monetizationWeight: 4.5,
         arpuMultiplier: 1.0,
-        subreddits: ["wallstreetbets", "options", "Daytrading"],
+        subreddits: ["wallstreetbets", "options", "Daytrading", "CryptoCurrency"],
     },
     {
         category: Category.HIGH_VALUE_AD_VERTICALS,
