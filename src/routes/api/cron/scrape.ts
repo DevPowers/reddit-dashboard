@@ -220,24 +220,34 @@ export const runScrapeCycle = async () => {
 		const cutoffHours = (scrapeIntervalDays * 24) - 12;
 		const cutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
 
-		const recentScrapes = await db
-			.select({ subredditId: metricsHistory.subredditId })
+		const lastScrapesResult = await db
+			.select({
+				subredditId: metricsHistory.subredditId,
+				lastScraped: sql<string>`max(${metricsHistory.recordedAt})`,
+			})
 			.from(metricsHistory)
-			.where(gte(metricsHistory.recordedAt, cutoff));
+			.groupBy(metricsHistory.subredditId);
 
-		const scrapedIds = new Set(recentScrapes.map((r) => r.subredditId));
-		const subs = allSubs.filter((sub) => !scrapedIds.has(sub.id));
+		const lastScrapedMap = new Map<number, number>();
+		for (const row of lastScrapesResult) {
+			lastScrapedMap.set(row.subredditId, new Date(row.lastScraped).getTime());
+		}
+
+		// Filter out subreddits that have been scraped recently
+		const subs = allSubs.filter((sub) => {
+			const lastScrapedTime = lastScrapedMap.get(sub.id) || 0;
+			return lastScrapedTime < cutoff.getTime();
+		});
+
+		// Sort subreddits so the ones that have gone the longest without a scrape are targeted first
+		subs.sort((a, b) => {
+			const timeA = lastScrapedMap.get(a.id) || 0;
+			const timeB = lastScrapedMap.get(b.id) || 0;
+			return timeA - timeB;
+		});
 
 		const results: any[] = [];
-
 		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-		// Shuffle the subs array so that subreddits at the end of the list 
-		// don't get starved if earlier subreddits consistently timeout and consume the timebox
-		for (let i = subs.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[subs[i], subs[j]] = [subs[j], subs[i]];
-		}
 
 		const fetchWithTimeout = async (url: string, ms: number) => {
 			const controller = new AbortController();
