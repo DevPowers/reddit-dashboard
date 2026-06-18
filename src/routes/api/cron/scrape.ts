@@ -279,6 +279,9 @@ export const runScrapeCycle = async () => {
 					scraperUrl += "&premium=true";
 				}
 
+				const providerNameStr = useZenRows ? "ZenRows" : (usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard");
+				logger.info("Cron", `Now trying to scrape r/${sub.name} using ${providerNameStr}...`);
+
 				if (!useZenRows) {
 					await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 				}
@@ -286,7 +289,7 @@ export const runScrapeCycle = async () => {
 				let response = await fetchWithTimeout(scraperUrl, 60000);
 
 				if (!response.ok) {
-					logger.warn("Cron", `Fetch failed for ${sub.name} (ZenRows: ${!!useZenRows}, Premium: ${usePremium})`, { status: response.status });
+					logger.warn("Cron", `Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
 					
 					if (!useZenRows) {
 						// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
@@ -322,6 +325,10 @@ export const runScrapeCycle = async () => {
 							if (fallbackUsePremium) {
 								scraperUrl += "&premium=true";
 							}
+							
+							const fallbackProviderStr = fallbackUsePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
+							logger.info("Cron", `Now trying to scrape r/${sub.name} using ${fallbackProviderStr} (Rotated API Key)...`);
+							
 							await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 							response = await fetchWithTimeout(scraperUrl, 60000);
 							fallbackUsed = true;
@@ -330,7 +337,7 @@ export const runScrapeCycle = async () => {
 					
 					if (!response.ok) {
 						if (fallbackUsed) {
-							logger.error("Cron", `Fallback fetch failed for ${sub.name}`);
+							logger.error("Cron", `Fallback fetch completely failed for r/${sub.name}. Moving to next subreddit.`);
 						}
 						
 						results.push({
@@ -442,6 +449,8 @@ export const runScrapeCycle = async () => {
 				if (sub.consecutiveFailures > 0) {
 					await db.update(subreddits).set({ consecutiveFailures: 0 }).where(eq(subreddits.id, sub.id));
 				}
+				
+				logger.info("Cron", `Successfully scraped r/${sub.name} using ${providerStr}. Visitors: ${weekly_visitors}, Contributions: ${weekly_contributions}`);
 
 				results.push({
 					name: sub.name,
