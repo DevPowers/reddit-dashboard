@@ -125,6 +125,7 @@ export const cronSubredditLogs = pgTable(
 		errorMessage: varchar("error_message", { length: 1000 }),
 		httpCode: integer("http_code"),
 		usedPremium: boolean("used_premium").default(false).notNull(),
+		provider: varchar("provider", { length: 50 }).default("scraperapi_standard").notNull(),
 		durationMs: integer("duration_ms").notNull(),
 		ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
 	},

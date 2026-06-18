@@ -339,6 +339,8 @@ export const runScrapeCycle = async () => {
 							error: response.statusText,
 						});
 						
+						const providerStr = useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard");
+						
 						await db.insert(cronSubredditLogs).values({
 							cronLogId: log.id,
 							subredditId: sub.id,
@@ -346,6 +348,7 @@ export const runScrapeCycle = async () => {
 							errorMessage: response.statusText || null,
 							httpCode: response.status || null,
 							usedPremium: usePremium || !!useZenRows,
+							provider: providerStr,
 							durationMs: Date.now() - fetchStartMs,
 							ranAt: sql`${getEasternTimeISO()}`,
 						});
@@ -421,6 +424,8 @@ export const runScrapeCycle = async () => {
 					recordedAt: sql`${getEasternTimeISO()}`,
 				});
 
+				const providerStr = useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard");
+
 				await db.insert(cronSubredditLogs).values({
 					cronLogId: log.id,
 					subredditId: sub.id,
@@ -428,6 +433,7 @@ export const runScrapeCycle = async () => {
 					errorMessage: null,
 					httpCode: response.status || null,
 					usedPremium: usePremium || !!useZenRows,
+					provider: providerStr,
 					durationMs: Date.now() - fetchStartMs,
 					ranAt: sql`${getEasternTimeISO()}`,
 				});

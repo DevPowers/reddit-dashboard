@@ -164,6 +164,7 @@ function SubredditPage() {
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Date/Time</th>
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">HTTP</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Provider</th>
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Premium Proxy</th>
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider text-right">Duration</th>
 									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Error Message</th>
@@ -182,6 +183,21 @@ function SubredditPage() {
 										</td>
 										<td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-text-main">
 											{log.httpCode || "—"}
+										</td>
+										<td className="px-4 py-3 whitespace-nowrap text-sm">
+											{log.provider === "zenrows" ? (
+												<span className="px-2 py-1 rounded-full text-xs font-bold bg-[#A855F7]/10 text-[#A855F7]">
+													ZENROWS
+												</span>
+											) : log.provider === "scraperapi_premium" ? (
+												<span className="px-2 py-1 rounded-full text-xs font-bold bg-warning/10 text-warning">
+													SCRAPERAPI
+												</span>
+											) : (
+												<span className="px-2 py-1 rounded-full text-xs font-bold bg-obsidian border border-obsidian-border text-text-muted">
+													SCRAPERAPI
+												</span>
+											)}
 										</td>
 										<td className="px-4 py-3 whitespace-nowrap text-sm">
 											<span className={`px-2 py-1 rounded-full text-xs font-bold ${log.usedPremium ? "bg-warning/10 text-warning" : "bg-obsidian border border-obsidian-border text-text-muted"}`}>
