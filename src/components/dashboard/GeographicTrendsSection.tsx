@@ -120,6 +120,7 @@ export function GeographicTrendsSection({
 									tickFormatter={(val) => `${val}%`}
 									tickLine={false}
 									axisLine={{ stroke: "#1F3238" }}
+									domain={['auto', 'auto']}
 								/>
 								<Tooltip content={<CustomTooltip />} />
 								<Legend wrapperStyle={{ paddingTop: "20px" }} />

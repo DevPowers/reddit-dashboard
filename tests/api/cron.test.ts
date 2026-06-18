@@ -229,7 +229,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 		const fetchCalls = mockFetch.mock.calls;
 		const callForSub = fetchCalls.find(call => call[0].includes('mexico'));
 		expect(callForSub).toBeDefined();
-		expect(callForSub[0]).toContain('&premium=true');
+		expect(callForSub![0]).toContain('&premium=true');
 
 		// Verify database reset consecutiveFailures to 0
 		updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));

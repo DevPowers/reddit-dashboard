@@ -131,12 +131,14 @@ function SubredditPage() {
 								stroke="#94A3B8" 
 								tick={{ fill: "#94A3B8", fontSize: 12 }}
 								tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+								domain={['auto', 'auto']}
 							/>
 							<YAxis 
 								yAxisId="right"
 								orientation="right"
 								stroke="#94A3B8" 
 								tick={{ fill: "#94A3B8", fontSize: 12 }}
+								domain={['auto', 'auto']}
 							/>
 							<Tooltip
 								contentStyle={{
@@ -177,6 +179,46 @@ function SubredditPage() {
 					</div>
 				)}
 			</div>
+
+			{data.metrics && data.metrics.length > 0 && (
+				<div 
+					className="dash-card p-6 cursor-default mb-6"
+					onClick={(e) => e.stopPropagation()}
+				>
+					<h2 className="text-lg font-bold text-text-main mb-4">Raw Data (Last 50 Records)</h2>
+					<div className="overflow-x-auto">
+						<table className="w-full text-left border-collapse">
+							<thead className="bg-obsidian/30 border-b border-obsidian-border">
+								<tr>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Date/Time</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Weekly Visitors</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Weekly Contributions</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-obsidian-border">
+								{data.metrics.slice(0, 50).map((row) => (
+									<tr key={row.id} className="hover:bg-obsidian-light/50 transition-colors">
+										<td className="px-4 py-3 text-sm text-text-main">
+											{new Date(row.recordedAt).toLocaleString(undefined, {
+												month: "short",
+												day: "numeric",
+												hour: "numeric",
+												minute: "2-digit",
+											})}
+										</td>
+										<td className="px-4 py-3 text-sm text-text-main">
+											{row.weeklyVisitors.toLocaleString()}
+										</td>
+										<td className="px-4 py-3 text-sm text-text-main">
+											{row.weeklyContributions.toLocaleString()}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
 		</div>
 		</div>
 	);
