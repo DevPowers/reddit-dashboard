@@ -430,8 +430,9 @@ export const runScrapeCycle = async () => {
 			}
 		}
 		const failedCount = results.filter(r => r.status === "failed").length;
-		const finalStatus = failedCount > 0 ? "failed" : "success";
-		const errorMessage = failedCount > 0 ? `${failedCount} subreddits failed to fetch.` : null;
+		const failureThreshold = Math.max(Math.floor(subs.length * 0.2), 1);
+		const finalStatus = failedCount > failureThreshold ? "failed" : "success";
+		const errorMessage = failedCount > 0 ? `${failedCount} out of ${subs.length} subreddits failed to fetch (Status: ${finalStatus})` : null;
 
 		if (finalStatus === "failed") {
 			logger.warn("Cron", "Scrape cycle completed with failures", { failedCount });
