@@ -279,8 +279,9 @@ export const runScrapeCycle = async () => {
 					scraperUrl += "&premium=true";
 				}
 
+				const attemptNum = sub.consecutiveFailures + 1;
 				const providerNameStr = useZenRows ? "ZenRows" : (usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard");
-				logger.info("Cron", `Now trying to scrape r/${sub.name} using ${providerNameStr}...`);
+				logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape r/${sub.name} using ${providerNameStr} (Key Index ${activeKeyRow!.keyIndex})...`);
 
 				if (!useZenRows) {
 					await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
@@ -289,7 +290,7 @@ export const runScrapeCycle = async () => {
 				let response = await fetchWithTimeout(scraperUrl, 60000);
 
 				if (!response.ok) {
-					logger.warn("Cron", `Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
+					logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
 					
 					if (!useZenRows) {
 						// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
@@ -328,7 +329,7 @@ export const runScrapeCycle = async () => {
 							
 							const fallbackProviderStr = fallbackUsePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
 							logger.info("Cron", `Switching to API key ${fallbackKeyRow.keyIndex} for provider ${fallbackProviderStr}...`);
-							logger.info("Cron", `Now trying to scrape r/${sub.name} using ${fallbackProviderStr}...`);
+							logger.info("Cron", `[Attempt ${attemptNum} Fallback] Now trying to scrape r/${sub.name} using ${fallbackProviderStr} (Key Index ${fallbackKeyRow.keyIndex})...`);
 							
 							await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 							response = await fetchWithTimeout(scraperUrl, 60000);
@@ -338,7 +339,7 @@ export const runScrapeCycle = async () => {
 					
 					if (!response.ok) {
 						if (fallbackUsed) {
-							logger.error("Cron", `Fallback fetch completely failed for r/${sub.name}. Moving to next subreddit.`);
+							logger.error("Cron", `[Attempt ${attemptNum} Fallback] Fetch completely failed for r/${sub.name}. Moving to next subreddit.`);
 						}
 						
 						results.push({
@@ -450,8 +451,7 @@ export const runScrapeCycle = async () => {
 				if (sub.consecutiveFailures > 0) {
 					await db.update(subreddits).set({ consecutiveFailures: 0 }).where(eq(subreddits.id, sub.id));
 				}
-				
-				logger.info("Cron", `Successfully scraped r/${sub.name} using ${providerStr}. Visitors: ${weekly_visitors}, Contributions: ${weekly_contributions}`);
+				logger.info("Cron", `[Attempt ${attemptNum}] Successfully scraped r/${sub.name} using ${providerStr}. Visitors: ${weekly_visitors}, Contributions: ${weekly_contributions}`);
 
 				results.push({
 					name: sub.name,
