@@ -327,7 +327,8 @@ export const runScrapeCycle = async () => {
 							}
 							
 							const fallbackProviderStr = fallbackUsePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
-							logger.info("Cron", `Now trying to scrape r/${sub.name} using ${fallbackProviderStr} (Rotated API Key)...`);
+							logger.info("Cron", `Switching to API key ${fallbackKeyRow.keyIndex} for provider ${fallbackProviderStr}...`);
+							logger.info("Cron", `Now trying to scrape r/${sub.name} using ${fallbackProviderStr}...`);
 							
 							await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 							response = await fetchWithTimeout(scraperUrl, 60000);
