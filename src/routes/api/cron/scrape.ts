@@ -45,6 +45,17 @@ export const runScrapeCycle = async () => {
 			)
 		);
 
+	// --- Concurrency Lock ---
+	const runningJobs = await db
+		.select()
+		.from(cronLogs)
+		.where(eq(cronLogs.status, "running"));
+
+	if (runningJobs.length > 0) {
+		logger.warn("Cron", "A scrape job is already running. Aborting concurrent execution.");
+		return new Response(JSON.stringify({ error: "Scrape job already running" }), { status: 409 });
+	}
+
 	const [log] = await db
 		.insert(cronLogs)
 		.values({ status: "running", ranAt: sql`${getEasternTimeISO()}` })
