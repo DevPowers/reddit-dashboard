@@ -5,6 +5,7 @@ import { TARGET_SUBREDDITS, PREMIUM_PROXIED_SUBS } from "../../../data/subreddit
 import { db } from "../../../db/index.server";
 import {
 	cronLogs,
+	cronSubredditLogs,
 	metricsHistory,
 	subredditGroups,
 	subreddits,
@@ -13,6 +14,7 @@ import {
 } from "../../../db/schema";
 import { logger } from "../../../lib/logger";
 import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
+import { getEasternTimeISO } from "../../../lib/calculations";
 import { platformHistoricalMetrics } from "../../../db/schema";
 
 export const runScrapeCycle = async () => {
@@ -45,7 +47,7 @@ export const runScrapeCycle = async () => {
 
 	const [log] = await db
 		.insert(cronLogs)
-		.values({ status: "running" })
+		.values({ status: "running", ranAt: sql`${getEasternTimeISO()}` })
 		.returning();
 
 	const startTime = Date.now();
@@ -244,6 +246,7 @@ export const runScrapeCycle = async () => {
 			const batch = subs.slice(i, i + 5);
 
 			for (const sub of batch) {
+				const fetchStartMs = Date.now();
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
@@ -306,6 +309,17 @@ export const runScrapeCycle = async () => {
 							error: response.statusText,
 						});
 						
+						await db.insert(cronSubredditLogs).values({
+							cronLogId: log.id,
+							subredditId: sub.id,
+							status: "failed",
+							errorMessage: response.statusText || null,
+							httpCode: response.status || null,
+							usedPremium: usePremium,
+							durationMs: Date.now() - fetchStartMs,
+							ranAt: sql`${getEasternTimeISO()}`,
+						});
+						
 						// Increment consecutiveFailures if it's not a quota/rate limit error
 						if (response.status !== 403 && response.status !== 429) {
 							await db.update(subreddits)
@@ -329,7 +343,23 @@ export const runScrapeCycle = async () => {
 				// Placeholder Validation Guard: Reddit's new web components serve a generic 3000/100 placeholder 
 				// if the scraper is blocked from executing the client-side GraphQL hydration.
 				if (weekly_visitors === 3000 && weekly_contributions === 100) {
-					throw new Error("Anti-Bot Detection: ScraperAPI returned Reddit's generic un-hydrated placeholder (3000/100).");
+					logger.warn("Cron", `Anti-Bot Detection for ${sub.name}. Generic un-hydrated placeholder.`);
+					results.push({
+						name: sub.name,
+						status: "failed",
+						error: "Anti-Bot Detection Placeholder",
+					});
+					await db.insert(cronSubredditLogs).values({
+						cronLogId: log.id,
+						subredditId: sub.id,
+						status: "failed",
+						errorMessage: "Anti-Bot Detection Placeholder",
+						httpCode: response.status || null,
+						usedPremium: usePremium,
+						durationMs: Date.now() - fetchStartMs,
+						ranAt: sql`${getEasternTimeISO()}`,
+					});
+					continue;
 				}
 
 				if (isNaN(weekly_visitors) || isNaN(weekly_contributions) || (weekly_visitors === 0 && weekly_contributions === 0)) {
@@ -339,15 +369,35 @@ export const runScrapeCycle = async () => {
 						status: "failed",
 						error: "DOM parse failed or zero metrics",
 					});
+					await db.insert(cronSubredditLogs).values({
+						cronLogId: log.id,
+						subredditId: sub.id,
+						status: "failed",
+						errorMessage: "DOM parse failed or zero metrics",
+						httpCode: response.status || null,
+						usedPremium: usePremium,
+						durationMs: Date.now() - fetchStartMs,
+						ranAt: sql`${getEasternTimeISO()}`,
+					});
 					continue;
 				}
 
-				const usedPremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 				await db.insert(metricsHistory).values({
 					subredditId: sub.id,
 					weeklyVisitors: weekly_visitors,
 					weeklyContributions: weekly_contributions,
-					usedPremium: usedPremium,
+					recordedAt: sql`${getEasternTimeISO()}`,
+				});
+
+				await db.insert(cronSubredditLogs).values({
+					cronLogId: log.id,
+					subredditId: sub.id,
+					status: "success",
+					errorMessage: null,
+					httpCode: response.status || null,
+					usedPremium: usePremium,
+					durationMs: Date.now() - fetchStartMs,
+					ranAt: sql`${getEasternTimeISO()}`,
 				});
 
 				// Reset failures on success

@@ -60,6 +60,57 @@ function SubredditPage() {
 				</button>
 			</div>
 
+			{data.logs && data.logs.length > 0 && (
+				<div 
+					className="dash-card p-6 cursor-default mb-6"
+					onClick={(e) => e.stopPropagation()}
+				>
+					<h2 className="text-lg font-bold text-text-main mb-4">Recent Execution Logs</h2>
+					<div className="overflow-x-auto">
+						<table className="w-full text-left border-collapse">
+							<thead className="bg-obsidian/30 border-b border-obsidian-border">
+								<tr>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Date/Time</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">HTTP</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Premium Proxy</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider text-right">Duration</th>
+									<th className="px-4 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">Error Message</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-obsidian-border/50">
+								{data.logs.map((log) => (
+									<tr key={log.id} className="hover:bg-obsidian-border/20 transition-colors">
+										<td className="px-4 py-3 whitespace-nowrap text-sm text-text-main">
+											{new Date(log.ranAt).toLocaleString()}
+										</td>
+										<td className="px-4 py-3 whitespace-nowrap text-sm">
+											<span className={`px-2 py-1 rounded-full text-xs font-bold ${log.status === "success" ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+												{log.status.toUpperCase()}
+											</span>
+										</td>
+										<td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-text-main">
+											{log.httpCode || "—"}
+										</td>
+										<td className="px-4 py-3 whitespace-nowrap text-sm">
+											<span className={`px-2 py-1 rounded-full text-xs font-bold ${log.usedPremium ? "bg-warning/10 text-warning" : "bg-obsidian border border-obsidian-border text-text-muted"}`}>
+												{log.usedPremium ? "PREMIUM" : "STANDARD"}
+											</span>
+										</td>
+										<td className="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-text-main">
+											{log.durationMs ? `${(log.durationMs / 1000).toFixed(1)}s` : "—"}
+										</td>
+										<td className="px-4 py-3 text-sm text-text-muted max-w-[200px] truncate" title={log.errorMessage || ""}>
+											{log.errorMessage || "—"}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
 			<div 
 				className="dash-card p-6 h-[500px] cursor-default"
 				onClick={(e) => e.stopPropagation()}

@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import * as schema from '../../src/db/schema';
-import { subreddits, metricsHistory } from '../../src/db/schema';
+import { subreddits, metricsHistory, cronSubredditLogs } from '../../src/db/schema';
 import { eq } from 'drizzle-orm';
 
 // We need to mock the exported `db` from `src/db/index` to point to our in-memory PGLite instance.
@@ -236,11 +236,11 @@ describe('Cron Job Idempotency & API Integration', () => {
 		expect(updatedSub[0].consecutiveFailures).toBe(0);
 
 		// Verify metric was tracked with usedPremium = true
-		const metric = await mockDb.select().from(metricsHistory).where(eq(metricsHistory.subredditId, updatedSub[0].id));
-		expect(metric.length).toBeGreaterThan(0);
-		// Since there are 160 subreddits and we mocked them all to fail except when premium=true
-		// mexico will be one of the few with a metric, so we sort or just check the first one.
-		expect(metric[0].usedPremium).toBe(true);
+		const logs = await mockDb.select().from(cronSubredditLogs).where(eq(cronSubredditLogs.subredditId, updatedSub[0].id));
+		expect(logs.length).toBeGreaterThan(0);
+		const successLog = logs.find((l: any) => l.status === 'success');
+		expect(successLog).toBeDefined();
+		expect(successLog.usedPremium).toBe(true);
 	}, 60000);
 });
 

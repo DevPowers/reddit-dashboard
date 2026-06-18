@@ -82,7 +82,6 @@ export const metricsHistory = pgTable(
 			.notNull(),
 		weeklyVisitors: integer("weekly_visitors").notNull(),
 		weeklyContributions: integer("weekly_contributions").notNull(),
-		usedPremium: boolean("used_premium").default(false).notNull(),
 		recordedAt: timestamp("recorded_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -107,6 +106,47 @@ export const cronLogs = pgTable("cron_logs", {
 	durationMs: integer("duration_ms"),
 	ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
 }).enableRLS();
+
+export const cronLogsRelations = relations(cronLogs, ({ many }) => ({
+	subredditLogs: many(cronSubredditLogs),
+}));
+
+export const cronSubredditLogs = pgTable(
+	"cron_subreddit_logs",
+	{
+		id: serial("id").primaryKey(),
+		cronLogId: integer("cron_log_id")
+			.references(() => cronLogs.id, { onDelete: "cascade" })
+			.notNull(),
+		subredditId: integer("subreddit_id")
+			.references(() => subreddits.id, { onDelete: "cascade" })
+			.notNull(),
+		status: varchar("status", { length: 50 }).notNull(), // 'success' or 'failed'
+		errorMessage: varchar("error_message", { length: 1000 }),
+		httpCode: integer("http_code"),
+		usedPremium: boolean("used_premium").default(false).notNull(),
+		durationMs: integer("duration_ms").notNull(),
+		ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(t) => [
+		index("cron_log_id_idx").on(t.cronLogId),
+		index("csl_subreddit_id_idx").on(t.subredditId),
+	],
+).enableRLS();
+
+export const cronSubredditLogsRelations = relations(
+	cronSubredditLogs,
+	({ one }) => ({
+		cronLog: one(cronLogs, {
+			fields: [cronSubredditLogs.cronLogId],
+			references: [cronLogs.id],
+		}),
+		subreddit: one(subreddits, {
+			fields: [cronSubredditLogs.subredditId],
+			references: [subreddits.id],
+		}),
+	}),
+);
 
 export const scraperKeys = pgTable("scraper_keys", {
 	id: serial("id").primaryKey(),
