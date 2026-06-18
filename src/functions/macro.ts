@@ -18,6 +18,7 @@ import {
 export const calculateAndSaveMacroMetrics = async () => {
 	const data = await db
 		.select({
+			id: metricsHistory.id,
 			subredditId: subreddits.id,
 			monetizationWeight: trackingGroups.monetizationWeight,
 			arpuMultiplier: trackingGroups.arpuMultiplier,
@@ -122,8 +123,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 	targetDate.setDate(targetDate.getDate() - 28);
 
 	// 3. Aggregate
-	let totalLatestDau = 0;
-	let totalHistoricalDau = 0;
+	let totalLatestDau = 0; // The absolute reach index
+	let growthNumeratorLatestDau = 0;
+	let growthDenominatorHistoricalDau = 0;
 	let totalWeightedVelocity = 0;
 	let velocityContributorCount = 0;
 
@@ -131,34 +133,40 @@ export const calculateAndSaveMacroMetrics = async () => {
 		const estDau = Math.floor(sub.weeklyVisitors / 7);
 		totalLatestDau += estDau;
 
-		// O(1) lookup instead of O(N) Array.find
-		const hist = historicalMap.get(sub.subredditId);
-		if (hist) {
-			const histDau = Math.floor(hist.weeklyVisitors / 7);
-			totalHistoricalDau += histDau;
-		}
-
 		const subHistory = dataBySubreddit.get(sub.subredditId) || [];
 
-		const baselinePoint = findClosestToDate(subHistory, targetDate);
-		const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
+		// "Same-Store" Metric Logic:
+		// Only factor subreddits into Growth and Velocity if they have multiple data points to compare.
+		// Otherwise, adding new subreddits dilutes the growth percentages heavily towards 0.
+		if (subHistory.length >= 2) {
+			const hist = historicalMap.get(sub.subredditId);
+			if (hist && hist.id !== sub.id) {
+				const histDau = Math.floor(hist.weeklyVisitors / 7);
+				growthDenominatorHistoricalDau += histDau;
+				growthNumeratorLatestDau += estDau;
+			}
 
-		// Percentage-based velocity instead of absolute delta
-		const velocity = calculateSubVelocity(
-			sub.weeklyVisitors,
-			baselineWau,
-			sub.arpuMultiplier,
-			sub.monetizationWeight,
-		);
-		totalWeightedVelocity += velocity;
-		velocityContributorCount++;
+			const baselinePoint = findClosestToDate(subHistory, targetDate);
+			const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
+
+			if (baselinePoint && baselinePoint.id !== sub.id) {
+				const velocity = calculateSubVelocity(
+					sub.weeklyVisitors,
+					baselineWau,
+					sub.arpuMultiplier,
+					sub.monetizationWeight,
+				);
+				totalWeightedVelocity += velocity;
+				velocityContributorCount++;
+			}
+		}
 	}
 
 	const overallGrowthPercent =
-		totalHistoricalDau > 0
-			? ((totalLatestDau - totalHistoricalDau) / totalHistoricalDau) * 100
+		growthDenominatorHistoricalDau > 0
+			? ((growthNumeratorLatestDau - growthDenominatorHistoricalDau) / growthDenominatorHistoricalDau) * 100
 			: 0;
-	const overallNetNewDau = totalLatestDau - totalHistoricalDau;
+	const overallNetNewDau = growthNumeratorLatestDau - growthDenominatorHistoricalDau;
 
 	// Dynamic normalization instead of magic /100000 constant
 	const velocityIndexScore = normalizeVelocityScore(

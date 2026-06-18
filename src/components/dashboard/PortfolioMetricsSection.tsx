@@ -236,6 +236,7 @@ export function PortfolioMetricsSection({
 											tick={{ fill: openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)", fontSize: 12 }} 
 											tickFormatter={(value) => openModal === "dau" ? `${(value / 1000).toFixed(0)}k` : value.toFixed(1)}
 											tickMargin={10} axisLine={false} tickLine={false} 
+											domain={openModal === "velocity" ? [-10, 10] : ['auto', 'auto']}
 										/>
 										{openModal === "dau" && (
 											<YAxis 
@@ -245,6 +246,7 @@ export function PortfolioMetricsSection({
 												tick={{ fill: "var(--color-success)", fontSize: 12 }} 
 												tickFormatter={(value) => `${value}%`}
 												tickMargin={10} axisLine={false} tickLine={false} 
+												domain={['dataMin - 2', 'dataMax + 2']}
 											/>
 										)}
 										<Tooltip
