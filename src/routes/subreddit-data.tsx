@@ -4,7 +4,7 @@ import { getAdminData } from "../functions/admin.functions";
 import { AdminKPISection } from "../components/admin/AdminKPISection";
 import { SubredditTable } from "../components/admin/SubredditTable";
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/subreddit-data")({
 	loader: () => getAdminData(),
 	staleTime: 60_000,
 	component: AdminDashboard,

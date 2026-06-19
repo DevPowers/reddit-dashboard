@@ -17,14 +17,14 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Reddit Investor Dashboard",
+				title: "REDDITSTOCK Dashboard",
 			},
 		],
 		links: [
 			{
 				rel: "icon",
 				type: "image/png",
-				href: "/favicon.png?v=3",
+				href: "/favicon.png?v=4",
 			},
 			{
 				rel: "stylesheet",
@@ -64,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<div className="flex h-14 items-center justify-between">
 							<div className="flex items-center gap-6">
 								<span className="font-bold text-white tracking-wider">
-									<span className="text-orangered">REDDIT</span>INVESTOR
+									<span className="text-orangered">REDDIT</span>STOCK
 								</span>
 								<nav className="flex gap-4">
 									<Link
@@ -77,12 +77,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 										Dashboard
 									</Link>
 									<Link
-										to="/admin"
+										to="/subreddit-data"
 										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
 										activeProps={{ className: "text-white border-b-2 border-white" }}
 										preload="render"
 									>
-										Admin
+										Subreddit Data
 									</Link>
 								</nav>
 							</div>
