@@ -86,6 +86,10 @@ Using Cheerio, the scraper will parse the DOM and extract the two new public eng
 1. `weekly_visitors`: Found in the `weekly-active-users` attribute.
 2. `weekly_contributions`: Found in the `weekly-contributions` attribute.
 
+### Reddit Engagement Metric Definitions
+- **Weekly visitors**: Shows how many *unique* users visited the community in the past 7 days based on a 28-day rolling average. This information excludes visitors using anonymous browsing mode on the native Reddit apps and bots.
+- **Weekly contributions**: Shows the number of posts and comments made in the community in the past 7 days. This information excludes any posts or comments that have been removed.
+
 ### Target Subreddits
 **Geographical Growth:**
 - `r/india` (India)

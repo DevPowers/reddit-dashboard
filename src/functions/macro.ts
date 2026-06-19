@@ -123,15 +123,15 @@ export const calculateAndSaveMacroMetrics = async () => {
 	targetDate.setDate(targetDate.getDate() - 28);
 
 	// 3. Aggregate
-	let totalLatestDau = 0; // The absolute reach index
-	let growthNumeratorLatestDau = 0;
-	let growthDenominatorHistoricalDau = 0;
+	let totalLatestReach = 0; // The absolute reach index
+	let growthNumeratorLatestReach = 0;
+	let growthDenominatorHistoricalReach = 0;
 	let totalWeightedVelocity = 0;
 	let velocityContributorCount = 0;
 
 	for (const sub of latestData) {
-		const estDau = Math.floor(sub.weeklyVisitors / 7);
-		totalLatestDau += estDau;
+		const reach = sub.weeklyVisitors;
+		totalLatestReach += reach;
 
 		const subHistory = dataBySubreddit.get(sub.subredditId) || [];
 
@@ -141,9 +141,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 		if (subHistory.length >= 2) {
 			const hist = historicalMap.get(sub.subredditId);
 			if (hist && hist.id !== sub.id) {
-				const histDau = Math.floor(hist.weeklyVisitors / 7);
-				growthDenominatorHistoricalDau += histDau;
-				growthNumeratorLatestDau += estDau;
+				const histReach = hist.weeklyVisitors;
+				growthDenominatorHistoricalReach += histReach;
+				growthNumeratorLatestReach += reach;
 			}
 
 			const baselinePoint = findClosestToDate(subHistory, targetDate);
@@ -163,10 +163,10 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 
 	const overallGrowthPercent =
-		growthDenominatorHistoricalDau > 0
-			? ((growthNumeratorLatestDau - growthDenominatorHistoricalDau) / growthDenominatorHistoricalDau) * 100
+		growthDenominatorHistoricalReach > 0
+			? ((growthNumeratorLatestReach - growthDenominatorHistoricalReach) / growthDenominatorHistoricalReach) * 100
 			: 0;
-	const overallNetNewDau = growthNumeratorLatestDau - growthDenominatorHistoricalDau;
+	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorHistoricalReach;
 
 	// Dynamic normalization instead of magic /100000 constant
 	const velocityIndexScore = normalizeVelocityScore(
@@ -188,9 +188,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 		const [updated] = await db
 			.update(platformHistoricalMetrics)
 			.set({
-				overallDauEstimate: totalLatestDau,
+				overallDauEstimate: totalLatestReach,
 				overallDauGrowthPercent: overallGrowthPercent,
-				overallNetNewDau: overallNetNewDau,
+				overallNetNewDau: overallNetNewReach,
 				velocityIndexScore: velocityIndexScore,
 			})
 			.where(eq(platformHistoricalMetrics.id, existingToday[0].id))
@@ -201,9 +201,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)
 		.values({
-			overallDauEstimate: totalLatestDau,
+			overallDauEstimate: totalLatestReach,
 			overallDauGrowthPercent: overallGrowthPercent,
-			overallNetNewDau: overallNetNewDau,
+			overallNetNewDau: overallNetNewReach,
 			velocityIndexScore: velocityIndexScore,
 		})
 		.returning();

@@ -8,7 +8,7 @@ vi.mock('../../src/db/index.server', () => ({
   db: { select: vi.fn() }
 }));
 
-import { Route } from '../../src/routes/admin';
+import { Route } from '../../src/routes/subreddits';
 
 describe('Admin Route', () => {
   it('should be a valid TanStack route', () => {

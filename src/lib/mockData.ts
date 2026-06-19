@@ -83,7 +83,7 @@ export function generateMockPlatformHistory() {
 	);
 	const daysToGenerate = Math.max(1, totalDays);
 
-	let baseDau = 1200000;
+	let baseReach = 1200000 * 7; // Base WAU
 	let baseVelocity = 2.5;
 
 	for (let i = 0; i <= daysToGenerate; i++) {
@@ -94,15 +94,16 @@ export function generateMockPlatformHistory() {
 		const trendFactor = 1 + i * 0.0008;
 		const noise = i === 0 ? 1 : 0.95 + Math.random() * 0.1;
 		
-		const dau = Math.floor(baseDau * trendFactor * noise);
+		const reach = Math.floor(baseReach * trendFactor * noise);
+		baseReach = baseReach * (1 + 0.08 / 180);
 		const velocity = Math.max(-10, Math.min(10, baseVelocity + (i * 0.1) * noise));
 
 		history.push({
 			id: idCounter++,
 			recordedAt: recordedAt.toISOString(),
-			overallDauEstimate: dau,
+			overallDauEstimate: reach,
 			overallDauGrowthPercent: i * 0.08,
-			overallNetNewDau: dau - baseDau,
+			overallNetNewDau: reach - 1200000 * 7,
 			velocityIndexScore: velocity,
 		});
 	}

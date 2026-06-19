@@ -96,7 +96,7 @@ export function PortfolioMetricsSection({
 						<span className="text-text-main font-medium">
 							{portfolioMetrics.overallNetNew > 0 ? "+" : ""}{portfolioMetrics.overallNetNew.toLocaleString()}
 						</span>{" "}
-						net new estimated daily reach
+						net new estimated weekly reach
 					</div>
 				</button>
 
