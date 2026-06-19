@@ -4,7 +4,7 @@ import { getAdminData } from "../functions/admin.functions";
 import { AdminKPISection } from "../components/admin/AdminKPISection";
 import { SubredditTable } from "../components/admin/SubredditTable";
 
-export const Route = createFileRoute("/subreddit-data")({
+export const Route = createFileRoute("/subreddits")({
 	loader: () => getAdminData(),
 	staleTime: 60_000,
 	component: AdminDashboard,
@@ -33,11 +33,10 @@ function AdminDashboard() {
 			{/* Top Bar: Title */}
 			<div className="mb-8 border-b border-obsidian-border pb-6">
 				<h1 className="text-3xl font-extrabold text-text-main tracking-tight">
-					System Administration
+					Subreddits
 				</h1>
 				<p className="text-text-muted text-sm mt-2">
-					Internal health metrics, cron job execution logs, and database
-					diagnostics.
+					Manage tracked subreddits and monitor data pipeline execution.
 				</p>
 			</div>
 
