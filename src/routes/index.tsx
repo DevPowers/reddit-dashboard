@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
-import { generateMockMetrics, generateMockPlatformHistory } from "../lib/mockData";
 import { ArpuExpectation, Category, type MetricData } from "../types";
 import {
 	getQuarterEndBaseline,
@@ -29,7 +28,6 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
 	const { metrics: serverData, platformHistory } = Route.useLoaderData();
-	const [useMockData, setUseMockData] = useState(false);
 	const [activeTier, setActiveTier] = useState<
 		"high" | "medium" | "low" | null
 	>(null);
@@ -49,13 +47,9 @@ function Dashboard() {
 		if (tier) setSelectedCategory(Category.GEOGRAPHY);
 	};
 
-	// Generate mock data only once
-	const mockData = useMemo(() => generateMockMetrics(), []);
-	const mockHistory = useMemo(() => generateMockPlatformHistory(), []);
-
 	// Determine data source
-	const dataToUse: MetricData[] = useMemo(() => useMockData ? mockData : serverData, [useMockData, mockData, serverData]);
-	const historyToUse = useMemo(() => useMockData ? mockHistory : platformHistory, [useMockData, mockHistory, platformHistory]);
+	const dataToUse: MetricData[] = serverData;
+	const historyToUse = platformHistory;
 
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
 	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
@@ -298,31 +292,6 @@ function Dashboard() {
 					<p className="text-text-muted text-sm mt-1">
 						Time-series percentage growth measured against {baselineDateStr}.
 					</p>
-				</div>
-				<div className="flex items-center gap-3 bg-obsidian-light px-4 py-2 border border-obsidian-border rounded-md shadow-sm">
-					<label
-						htmlFor="mock-toggle"
-						className="text-xs font-semibold text-text-muted cursor-pointer select-none tracking-wide uppercase"
-					>
-						Use Mock Data
-					</label>
-					<div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-						<input
-							type="checkbox"
-							id="mock-toggle"
-							checked={useMockData}
-							onChange={(e) => setUseMockData(e.target.checked)}
-							className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
-							style={{
-								transform: useMockData ? "translateX(100%)" : "translateX(0)",
-								borderColor: useMockData ? "var(--color-orangered)" : "var(--color-text-muted)",
-							}}
-						/>
-						<label
-							htmlFor="mock-toggle"
-							className={`toggle-label block overflow-hidden h-5 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${useMockData ? "bg-orangered-light border border-orangered" : "bg-obsidian-border"}`}
-						/>
-					</div>
 				</div>
 			</div>
 

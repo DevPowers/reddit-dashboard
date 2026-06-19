@@ -1,0 +1,1 @@
+ALTER TABLE "cron_subreddit_logs" ADD COLUMN "provider" varchar(50) DEFAULT 'scraperapi_standard' NOT NULL;

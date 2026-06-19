@@ -68,8 +68,8 @@ describe("Macro Metrics Math Scenarios", () => {
 
 		const result = await calculateAndSaveMacroMetrics();
 
-		// Engagement Index (Total Reach) should include the 1,000,000 DAU
-		expect(result.overallDauEstimate).toBe(1000000);
+		// Engagement Index (Total Reach) should include the 7,000,000 Reach
+		expect(result.overallDauEstimate).toBe(7000000);
 		
 		// Growth and Velocity MUST remain 0 to prevent dilution spikes!
 		expect(result.overallDauGrowthPercent).toBe(0);
@@ -125,14 +125,14 @@ describe("Macro Metrics Math Scenarios", () => {
 
 		const result = await calculateAndSaveMacroMetrics();
 
-		// Engagement Index should use the absolute latest DAU (110k + 1,000k)
-		expect(result.overallDauEstimate).toBe(1110000);
+		// Engagement Index should use the absolute latest reach (770k + 7,000k)
+		expect(result.overallDauEstimate).toBe(7770000);
 
-		// Growth should STILL accurately measure (110k - 100k) / 100k = 10% despite the new 1M DAU sub
+		// Growth should STILL accurately measure (770k - 700k) / 700k = 10% despite the new 7M Reach sub
 		expect(result.overallDauGrowthPercent).toBeCloseTo(10, 1);
 		
-		// Net new should accurately measure 110k - 100k = 10,000
-		expect(result.overallNetNewDau).toBe(10000);
+		// Net new should accurately measure 770k - 700k = 70,000
+		expect(result.overallNetNewDau).toBe(70000);
 
 		// Velocity should be positive because growth was positive
 		expect(result.velocityIndexScore).toBeGreaterThan(0);

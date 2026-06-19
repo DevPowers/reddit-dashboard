@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import React, { Suspense } from 'react';
 import { TARGET_SUBREDDITS } from '../../src/data/subreddits';
 import { Category } from '../../src/types';
+import { generateMockMetrics, generateMockPlatformHistory } from '../../src/lib/mockData';
 
 // Mock DB to prevent postgres from connecting during imports
 vi.mock('../../src/db/index.server', () => ({
@@ -28,7 +29,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     createFileRoute: () => (options: any) => {
       return {
         options,
-        useLoaderData: () => ({ metrics: [], platformHistory: [] }) // Start with empty real data
+        useLoaderData: () => ({ metrics: generateMockMetrics(), platformHistory: generateMockPlatformHistory() })
       };
     }
   };
@@ -60,19 +61,10 @@ describe('Dashboard UI', () => {
     expect(screen.getByText('Low ARPU')).toBeInTheDocument();
   });
 
-  it('toggles Mock Data correctly and opens accordion', async () => {
+  it('opens accordion for default geography category', async () => {
     await act(async () => {
       render(<TestWrapper />);
     });
-
-    const mockDataToggle = screen.getByLabelText(/use mock data/i);
-    expect(mockDataToggle).not.toBeChecked();
-
-    await act(async () => {
-      fireEvent.click(mockDataToggle);
-    });
-
-    expect(mockDataToggle).toBeChecked();
 
     const firstLowGeoGroup = TARGET_SUBREDDITS.find(g => g.category === Category.GEOGRAPHY && g.arpuExpectation === 'low');
     const dynamicSub = firstLowGeoGroup ? firstLowGeoGroup.subreddits[0] : 'Unknown';
@@ -94,12 +86,6 @@ describe('Dashboard UI', () => {
   it('aggregates chart data by ARPU for Geography category', async () => {
     await act(async () => {
       render(<TestWrapper />);
-    });
-
-    // Toggle mock data to populate charts
-    const mockDataToggle = screen.getByLabelText(/use mock data/i);
-    await act(async () => {
-      fireEvent.click(mockDataToggle);
     });
 
     // We start on Geography category by default
