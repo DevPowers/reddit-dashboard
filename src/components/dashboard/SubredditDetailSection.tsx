@@ -1,5 +1,6 @@
 import { getGrowthColorClass, formatGrowth } from "../../lib/utils";
 import { Accordion, AccordionItem } from "../Accordion";
+import { useNavigate } from "@tanstack/react-router";
 
 interface MetricData {
 	id: number;
@@ -25,6 +26,8 @@ interface SubredditDetailSectionProps {
 }
 
 export function SubredditDetailSection({ accordionData }: SubredditDetailSectionProps) {
+	const navigate = useNavigate();
+
 	return (
 		<div className="dash-card overflow-hidden">
 			{/* Tier 4: Accordion Metric Table */}
@@ -61,9 +64,10 @@ export function SubredditDetailSection({ accordionData }: SubredditDetailSection
 										{group.items.map((row: MetricData) => (
 											<tr
 												key={row.id}
-												className="hover:bg-obsidian-border/20 transition-colors"
+												onClick={() => navigate({ to: "/r/$subreddit", params: { subreddit: row.name } })}
+												className="group cursor-pointer hover:bg-white/5 transition-colors"
 											>
-												<td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-text-main">
+												<td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white group-hover:text-orangered transition-colors">
 													r/{row.name}
 												</td>
 												<td className="px-4 py-3 whitespace-nowrap text-sm text-text-main text-right font-mono">
