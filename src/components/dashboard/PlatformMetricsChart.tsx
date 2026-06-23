@@ -14,8 +14,10 @@ import {
 interface HistoricalMetric {
 	id: number;
 	recordedAt: Date | string;
-	totalWeeklyReach: number;
-	netNewWeeklyReach: number;
+	totalWeeklyVisitors: number;
+	netNewWeeklyVisitors: number;
+	totalWeeklyContributions: number;
+	netNewWeeklyContributions: number;
 	velocityIndexScore: number;
 }
 
@@ -32,7 +34,8 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"Net New Users": row.netNewWeeklyReach,
+			"Net New Visitors": row.netNewWeeklyVisitors,
+			"Net New Contributions": row.netNewWeeklyContributions,
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
 	}, [data]);
@@ -69,7 +72,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 							tickLine={false}
 						/>
 						
-						{/* Left Y-Axis for Net New Users */}
+						{/* Left Y-Axis for Net New Metrics */}
 						<YAxis
 							yAxisId="left"
 							stroke="#6366F1"
@@ -109,7 +112,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 								if (name === "Velocity Index") {
 									return [value > 0 ? `+${value}` : value, name];
 								}
-								if (name === "Net New Users") {
+								if (name === "Net New Visitors" || name === "Net New Contributions") {
 									return [Number(value).toLocaleString(), name];
 								}
 								return [Number(value).toLocaleString(), name];
@@ -123,8 +126,17 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 						<Line
 							yAxisId="left"
 							type="monotone"
-							dataKey="Net New Users"
+							dataKey="Net New Visitors"
 							stroke="#6366F1"
+							strokeWidth={3}
+							dot={false}
+							activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
+						/>
+						<Line
+							yAxisId="left"
+							type="monotone"
+							dataKey="Net New Contributions"
+							stroke="#2ECC71"
 							strokeWidth={3}
 							dot={false}
 							activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}

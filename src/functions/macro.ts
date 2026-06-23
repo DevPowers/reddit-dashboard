@@ -22,6 +22,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 			monetizationWeight: trackingGroups.monetizationWeight,
 			arpuMultiplier: trackingGroups.arpuMultiplier,
 			weeklyVisitors: metricsHistory.weeklyVisitors,
+			weeklyContributions: metricsHistory.weeklyContributions,
 			recordedAt: metricsHistory.recordedAt,
 		})
 		.from(metricsHistory)
@@ -98,12 +99,17 @@ export const calculateAndSaveMacroMetrics = async () => {
 	let totalLatestReach = 0;
 	let growthNumeratorLatestReach = 0;
 	let growthDenominatorBaselineReach = 0;
+	let totalLatestContributions = 0;
+	let growthNumeratorLatestContributions = 0;
+	let growthDenominatorBaselineContributions = 0;
 	let totalWeightedVelocity = 0;
 	let velocityContributorCount = 0;
 
 	for (const sub of latestData) {
 		const reach = sub.weeklyVisitors;
+		const contributions = sub.weeklyContributions;
 		totalLatestReach += reach;
+		totalLatestContributions += contributions;
 
 		const subHistory = dataBySubreddit.get(sub.subredditId) || [];
 		const baseline = baselineMap.get(sub.subredditId);
@@ -116,8 +122,11 @@ export const calculateAndSaveMacroMetrics = async () => {
 
 		if (distinctDates.size >= 2 && baseline) {
 			const baselineReach = baseline.weeklyVisitors;
+			const baselineContributions = baseline.weeklyContributions;
 			growthDenominatorBaselineReach += baselineReach;
 			growthNumeratorLatestReach += reach;
+			growthDenominatorBaselineContributions += baselineContributions;
+			growthNumeratorLatestContributions += contributions;
 
 			// Velocity calculation uses 28-day window
 			const baselinePoint = findClosestToDate(subHistory, targetDate);
@@ -142,6 +151,12 @@ export const calculateAndSaveMacroMetrics = async () => {
 			: 0;
 	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorBaselineReach;
 
+	const overallContributionGrowthPercent =
+		growthDenominatorBaselineContributions > 0
+			? ((growthNumeratorLatestContributions - growthDenominatorBaselineContributions) / growthDenominatorBaselineContributions) * 100
+			: 0;
+	const overallNetNewContributions = growthNumeratorLatestContributions - growthDenominatorBaselineContributions;
+
 	// Dynamic normalization instead of magic /100000 constant
 	const velocityIndexScore = normalizeVelocityScore(
 		totalWeightedVelocity,
@@ -162,9 +177,12 @@ export const calculateAndSaveMacroMetrics = async () => {
 		const [updated] = await db
 			.update(platformHistoricalMetrics)
 			.set({
-				totalWeeklyReach: totalLatestReach,
-				weeklyReachGrowthPercent: overallGrowthPercent,
-				netNewWeeklyReach: overallNetNewReach,
+				totalWeeklyVisitors: totalLatestReach,
+				visitorGrowthPercent: overallGrowthPercent,
+				netNewWeeklyVisitors: overallNetNewReach,
+				totalWeeklyContributions: totalLatestContributions,
+				contributionGrowthPercent: overallContributionGrowthPercent,
+				netNewWeeklyContributions: overallNetNewContributions,
 				velocityIndexScore: velocityIndexScore,
 			})
 			.where(eq(platformHistoricalMetrics.id, existingToday[0].id))
@@ -175,9 +193,12 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)
 		.values({
-			totalWeeklyReach: totalLatestReach,
-			weeklyReachGrowthPercent: overallGrowthPercent,
-			netNewWeeklyReach: overallNetNewReach,
+			totalWeeklyVisitors: totalLatestReach,
+			visitorGrowthPercent: overallGrowthPercent,
+			netNewWeeklyVisitors: overallNetNewReach,
+			totalWeeklyContributions: totalLatestContributions,
+			contributionGrowthPercent: overallContributionGrowthPercent,
+			netNewWeeklyContributions: overallNetNewContributions,
 			velocityIndexScore: velocityIndexScore,
 		})
 		.returning();

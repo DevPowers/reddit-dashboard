@@ -16,16 +16,21 @@ import {
 interface HistoricalMetric {
 	id: number;
 	recordedAt: Date | string;
-	totalWeeklyReach: number;
-	weeklyReachGrowthPercent: number;
-	netNewWeeklyReach: number;
+	totalWeeklyVisitors: number;
+	visitorGrowthPercent: number;
+	netNewWeeklyVisitors: number;
+	totalWeeklyContributions: number;
+	contributionGrowthPercent: number;
+	netNewWeeklyContributions: number;
 	velocityIndexScore: number;
 }
 
 interface PortfolioMetricsSectionProps {
 	portfolioMetrics: {
-		overallGrowthPercent: number;
-		overallNetNew: number;
+		visitorGrowthPercent: number;
+		netNewVisitors: number;
+		contributionGrowthPercent: number;
+		netNewContributions: number;
 		weightedVelocity: number;
 	};
 	arpuAggregates: {
@@ -54,7 +59,7 @@ export function PortfolioMetricsSection({
 	setActiveTier,
 	platformHistory = [],
 }: PortfolioMetricsSectionProps) {
-	const [openModal, setOpenModal] = useState<"dau" | "velocity" | null>(null);
+	const [openModal, setOpenModal] = useState<"visitors" | "contributions" | "velocity" | null>(null);
 
 	const chartData = useMemo(() => {
 		if (!platformHistory) return [];
@@ -63,8 +68,10 @@ export function PortfolioMetricsSection({
 		);
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"Net New Users": row.netNewWeeklyReach,
-			"Percent Growth": Number(row.weeklyReachGrowthPercent.toFixed(2)),
+			"Net New Visitors": row.netNewWeeklyVisitors,
+			"Visitor Percent Growth": Number(row.visitorGrowthPercent.toFixed(2)),
+			"Net New Contributions": row.netNewWeeklyContributions,
+			"Contribution Percent Growth": Number(row.contributionGrowthPercent.toFixed(2)),
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
 	}, [platformHistory]);
@@ -72,38 +79,70 @@ export function PortfolioMetricsSection({
 	return (
 		<>
 			{/* Hero KPI: Overall Portfolio Metrics */}
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				{/* Weekly Visitor Growth Card */}
 				<button 
 					type="button"
-					onClick={() => setOpenModal("dau")}
+					onClick={() => setOpenModal("visitors")}
 					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Weekly Reach Growth
+						Weekly Visitor Growth
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
-							className={`text-5xl font-extrabold tracking-tight ${getGrowthColorClass(portfolioMetrics.overallGrowthPercent)}`}
+							className={`text-5xl font-extrabold tracking-tight ${getGrowthColorClass(portfolioMetrics.visitorGrowthPercent)}`}
 						>
-							{formatGrowth(portfolioMetrics.overallGrowthPercent)}
+							{formatGrowth(portfolioMetrics.visitorGrowthPercent)}
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-success" />
 						<span className="text-text-main font-medium">
-							{portfolioMetrics.overallNetNew > 0 ? "+" : ""}{portfolioMetrics.overallNetNew.toLocaleString()}
+							{portfolioMetrics.netNewVisitors > 0 ? "+" : ""}{portfolioMetrics.netNewVisitors.toLocaleString()}
 						</span>{" "}
-						net new weekly users vs quarter baseline
+						net new weekly visitors vs quarter baseline
 					</div>
 				</button>
 
+				{/* Weekly Contributor Growth Card */}
+				<button 
+					type="button"
+					onClick={() => setOpenModal("contributions")}
+					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-2/20 shadow-[0_4px_20px_rgba(46,204,113,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+				>
+					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-2/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+					</div>
+					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
+						Weekly Contributor Growth
+					</h3>
+					<div className="flex items-end gap-3 mt-3">
+						<span
+							className={`text-5xl font-extrabold tracking-tight ${getGrowthColorClass(portfolioMetrics.contributionGrowthPercent)}`}
+						>
+							{formatGrowth(portfolioMetrics.contributionGrowthPercent)}
+						</span>
+					</div>
+					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
+						<span className="w-1.5 h-1.5 rounded-full bg-chart-2" />
+						<span className="text-text-main font-medium">
+							{portfolioMetrics.netNewContributions > 0 ? "+" : ""}{portfolioMetrics.netNewContributions.toLocaleString()}
+						</span>{" "}
+						net new weekly contributions vs quarter baseline
+					</div>
+				</button>
+			</div>
+
+			{/* Velocity Card (Full Width) */}
+			<div className="mb-8">
 				<button
 					type="button"
 					onClick={() => setOpenModal("velocity")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-1/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card w-full p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-1/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-1/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
@@ -211,7 +250,7 @@ export function PortfolioMetricsSection({
 					>
 						<div className="flex items-center justify-between p-6 border-b border-obsidian-border bg-obsidian-light">
 							<h3 className="text-xl font-bold text-white">
-								{openModal === "dau" ? "Weekly Reach Trend" : "ARPU Velocity Trend"}
+								{openModal === "visitors" ? "Weekly Visitor Trend" : openModal === "contributions" ? "Weekly Contributor Trend" : "ARPU Velocity Trend"}
 							</h3>
 							<button 
 								onClick={() => setOpenModal(null)}
@@ -232,13 +271,13 @@ export function PortfolioMetricsSection({
 										<XAxis dataKey="date" stroke="var(--color-text-muted)" tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
 										<YAxis 
 											yAxisId="left"
-											stroke={openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)"} 
-											tick={{ fill: openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)", fontSize: 12 }} 
-											tickFormatter={(value) => openModal === "dau" ? `${(value / 1000).toFixed(0)}k` : value.toFixed(1)}
+											stroke={openModal === "visitors" ? "var(--color-orangered)" : openModal === "contributions" ? "var(--color-chart-2)" : "var(--color-chart-1)"} 
+											tick={{ fill: openModal === "visitors" ? "var(--color-orangered)" : openModal === "contributions" ? "var(--color-chart-2)" : "var(--color-chart-1)", fontSize: 12 }} 
+											tickFormatter={(value) => openModal === "velocity" ? value.toFixed(1) : `${(value / 1000).toFixed(0)}k`}
 											tickMargin={10} axisLine={false} tickLine={false} 
 											domain={openModal === "velocity" ? [-10, 10] : ['auto', 'auto']}
 										/>
-										{openModal === "dau" && (
+										{(openModal === "visitors" || openModal === "contributions") && (
 											<YAxis 
 												yAxisId="right"
 												orientation="right"
@@ -253,20 +292,59 @@ export function PortfolioMetricsSection({
 											contentStyle={{ backgroundColor: "var(--color-obsidian-light)", border: "1px solid var(--color-obsidian-border)", borderRadius: "8px", color: "var(--color-text-main)" }}
 											itemStyle={{ color: "var(--color-text-main)" }}
 										/>
-										<Line
-											yAxisId="left"
-											type="monotone"
-											dataKey={openModal === "dau" ? "Net New Users" : "Velocity Index"}
-											stroke={openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)"}
-											strokeWidth={3}
-											dot={false}
-											activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
-										/>
-										{openModal === "dau" && (
+										
+										{/* Left axis main metric line */}
+										{openModal === "visitors" && (
+											<Line
+												yAxisId="left"
+												type="monotone"
+												dataKey="Net New Visitors"
+												stroke="var(--color-orangered)"
+												strokeWidth={3}
+												dot={false}
+												activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
+											/>
+										)}
+										{openModal === "contributions" && (
+											<Line
+												yAxisId="left"
+												type="monotone"
+												dataKey="Net New Contributions"
+												stroke="var(--color-chart-2)"
+												strokeWidth={3}
+												dot={false}
+												activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
+											/>
+										)}
+										{openModal === "velocity" && (
+											<Line
+												yAxisId="left"
+												type="monotone"
+												dataKey="Velocity Index"
+												stroke="var(--color-chart-1)"
+												strokeWidth={3}
+												dot={false}
+												activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
+											/>
+										)}
+										
+										{/* Right axis percent line */}
+										{openModal === "visitors" && (
 											<Line
 												yAxisId="right"
 												type="monotone"
-												dataKey="Percent Growth"
+												dataKey="Visitor Percent Growth"
+												stroke="var(--color-success)"
+												strokeWidth={3}
+												dot={false}
+												activeDot={{ r: 6, stroke: "var(--color-text-main)", strokeWidth: 2 }}
+											/>
+										)}
+										{openModal === "contributions" && (
+											<Line
+												yAxisId="right"
+												type="monotone"
+												dataKey="Contribution Percent Growth"
 												stroke="var(--color-success)"
 												strokeWidth={3}
 												dot={false}

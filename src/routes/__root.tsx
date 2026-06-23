@@ -17,7 +17,23 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Reddit Investor Dashboard",
+				title: "Reddit Investor Dashboard | Real-time Engagement Metrics",
+			},
+			{
+				name: "description",
+				content: "Track real-time geographic and advertising user growth, engagement metrics, and ARPU velocity trends across Reddit's most important communities.",
+			},
+			{
+				property: "og:title",
+				content: "Reddit Investor Dashboard",
+			},
+			{
+				property: "og:description",
+				content: "Track real-time geographic and advertising user growth, engagement metrics, and ARPU velocity trends across Reddit's most important communities.",
+			},
+			{
+				name: "robots",
+				content: "index, follow",
 			},
 		],
 		links: [

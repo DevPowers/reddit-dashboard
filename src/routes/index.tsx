@@ -136,15 +136,19 @@ function Dashboard() {
 		
 		if (!latest) {
 			return {
-				overallGrowthPercent: 0,
-				overallNetNew: 0,
+				visitorGrowthPercent: 0,
+				netNewVisitors: 0,
+				contributionGrowthPercent: 0,
+				netNewContributions: 0,
 				weightedVelocity: 0,
 			};
 		}
 
 		return {
-			overallGrowthPercent: latest.weeklyReachGrowthPercent,
-			overallNetNew: latest.netNewWeeklyReach,
+			visitorGrowthPercent: latest.visitorGrowthPercent,
+			netNewVisitors: latest.netNewWeeklyVisitors,
+			contributionGrowthPercent: latest.contributionGrowthPercent,
+			netNewContributions: latest.netNewWeeklyContributions,
 			weightedVelocity: latest.velocityIndexScore,
 		};
 	}, [historyToUse]);

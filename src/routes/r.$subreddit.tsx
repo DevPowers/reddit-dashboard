@@ -185,17 +185,13 @@ function SubredditPage() {
 											{log.httpCode || "—"}
 										</td>
 										<td className="px-4 py-3 whitespace-nowrap text-sm">
-											{log.provider === "zenrows" ? (
-												<span className="px-2 py-1 rounded-full text-xs font-bold bg-[#A855F7]/10 text-[#A855F7]">
-													ZENROWS
-												</span>
-											) : log.provider === "scraperapi_premium" ? (
+											{log.usedPremium ? (
 												<span className="px-2 py-1 rounded-full text-xs font-bold bg-warning/10 text-warning">
-													SCRAPERAPI
+													PREMIUM
 												</span>
 											) : (
 												<span className="px-2 py-1 rounded-full text-xs font-bold bg-obsidian border border-obsidian-border text-text-muted">
-													SCRAPERAPI
+													STANDARD
 												</span>
 											)}
 										</td>

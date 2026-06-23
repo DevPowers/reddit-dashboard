@@ -50,6 +50,13 @@
       "when": 1781839922584,
       "tag": "0006_fair_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781847251000,
+      "tag": "0007_visitor_contributor_split",
+      "breakpoints": true
     }
   ]
 }

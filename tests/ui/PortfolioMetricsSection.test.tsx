@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
-import React from "react";
 import { PortfolioMetricsSection } from "../../src/components/dashboard/PortfolioMetricsSection";
 
 // Mock recharts to inspect props passed to YAxis
@@ -28,8 +27,10 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 		render(
 			<PortfolioMetricsSection
 				portfolioMetrics={{
-					overallGrowthPercent: 0,
-					overallNetNew: 0,
+					visitorGrowthPercent: 0,
+					netNewVisitors: 0,
+					contributionGrowthPercent: 0,
+					netNewContributions: 0,
 					weightedVelocity: 0,
 				}}
 				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
@@ -53,9 +54,11 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 		render(
 			<PortfolioMetricsSection
 				portfolioMetrics={{
-					overallGrowthPercent: 0, // 0 due to dilution
-					overallNetNew: 0,
-					weightedVelocity: 0, // 0 due to dilution
+					visitorGrowthPercent: 0,
+					netNewVisitors: 0,
+					contributionGrowthPercent: 0,
+					netNewContributions: 0,
+					weightedVelocity: 0,
 				}}
 				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
 				activeTier={null}
@@ -64,9 +67,12 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					{
 						id: 1,
 						recordedAt: "2026-06-18T10:00:00Z",
-						totalWeeklyReach: 1000000,
-						weeklyReachGrowthPercent: 0,
-						netNewWeeklyReach: 0,
+						totalWeeklyVisitors: 1000000,
+						visitorGrowthPercent: 0,
+						netNewWeeklyVisitors: 0,
+						totalWeeklyContributions: 10000,
+						contributionGrowthPercent: 0,
+						netNewWeeklyContributions: 0,
 						velocityIndexScore: 0,
 					},
 				]}
@@ -83,8 +89,10 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 		render(
 			<PortfolioMetricsSection
 				portfolioMetrics={{
-					overallGrowthPercent: 10,
-					overallNetNew: 10000,
+					visitorGrowthPercent: 10,
+					netNewVisitors: 10000,
+					contributionGrowthPercent: 10,
+					netNewContributions: 1000,
 					weightedVelocity: 2.5,
 				}}
 				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
@@ -94,17 +102,23 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					{
 						id: 1,
 						recordedAt: "2026-06-17T10:00:00Z",
-						totalWeeklyReach: 100000,
-						weeklyReachGrowthPercent: 0,
-						netNewWeeklyReach: 0,
+						totalWeeklyVisitors: 100000,
+						visitorGrowthPercent: 0,
+						netNewWeeklyVisitors: 0,
+						totalWeeklyContributions: 1000,
+						contributionGrowthPercent: 0,
+						netNewWeeklyContributions: 0,
 						velocityIndexScore: 0,
 					},
 					{
 						id: 2,
 						recordedAt: "2026-06-18T10:00:00Z",
-						totalWeeklyReach: 110000,
-						weeklyReachGrowthPercent: 10,
-						netNewWeeklyReach: 10000,
+						totalWeeklyVisitors: 110000,
+						visitorGrowthPercent: 10,
+						netNewWeeklyVisitors: 10000,
+						totalWeeklyContributions: 1100,
+						contributionGrowthPercent: 10,
+						netNewWeeklyContributions: 100,
 						velocityIndexScore: 2.5,
 					},
 				]}
@@ -128,8 +142,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 			closeButton.click();
 		});
 
-		// Open DAU modal
-		const dauButton = screen.getByText("Weekly Reach Growth").closest('button');
+		const dauButton = screen.getByText("Weekly Visitor Growth").closest('button');
 		act(() => {
 			dauButton?.click();
 		});

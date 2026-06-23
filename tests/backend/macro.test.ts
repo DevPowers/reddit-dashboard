@@ -40,9 +40,12 @@ describe("Macro Metrics Math Scenarios", () => {
 		const result = await calculateAndSaveMacroMetrics();
 
 		expect(result).toBeDefined();
-		expect(result.totalWeeklyReach).toBe(0);
-		expect(result.weeklyReachGrowthPercent).toBe(0);
-		expect(result.netNewWeeklyReach).toBe(0);
+		expect(result.totalWeeklyVisitors).toBe(0);
+		expect(result.visitorGrowthPercent).toBe(0);
+		expect(result.netNewWeeklyVisitors).toBe(0);
+		expect(result.totalWeeklyContributions).toBe(0);
+		expect(result.contributionGrowthPercent).toBe(0);
+		expect(result.netNewWeeklyContributions).toBe(0);
 		expect(result.velocityIndexScore).toBe(0);
 	});
 
@@ -69,11 +72,14 @@ describe("Macro Metrics Math Scenarios", () => {
 		const result = await calculateAndSaveMacroMetrics();
 
 		// Engagement Index (Total Reach) should include the 7,000,000 Reach
-		expect(result.totalWeeklyReach).toBe(7000000);
+		expect(result.totalWeeklyVisitors).toBe(7000000);
+		expect(result.totalWeeklyContributions).toBe(100);
 		
 		// Growth and Velocity MUST remain 0 to prevent dilution spikes!
-		expect(result.weeklyReachGrowthPercent).toBe(0);
-		expect(result.netNewWeeklyReach).toBe(0);
+		expect(result.visitorGrowthPercent).toBe(0);
+		expect(result.netNewWeeklyVisitors).toBe(0);
+		expect(result.contributionGrowthPercent).toBe(0);
+		expect(result.netNewWeeklyContributions).toBe(0);
 		expect(result.velocityIndexScore).toBe(0);
 	});
 
@@ -126,13 +132,17 @@ describe("Macro Metrics Math Scenarios", () => {
 		const result = await calculateAndSaveMacroMetrics();
 
 		// Engagement Index should use the absolute latest reach (770k + 7,000k)
-		expect(result.totalWeeklyReach).toBe(7770000);
+		expect(result.totalWeeklyVisitors).toBe(7770000);
+		expect(result.totalWeeklyContributions).toBe(210);
 
 		// Growth should STILL accurately measure (770k - 700k) / 700k = 10% despite the new 7M Reach sub
-		expect(result.weeklyReachGrowthPercent).toBeCloseTo(10, 1);
+		expect(result.visitorGrowthPercent).toBeCloseTo(10, 1);
 		
 		// Net new should accurately measure 770k - 700k = 70,000
-		expect(result.netNewWeeklyReach).toBe(70000);
+		expect(result.netNewWeeklyVisitors).toBe(70000);
+		
+		expect(result.contributionGrowthPercent).toBeCloseTo(10, 1);
+		expect(result.netNewWeeklyContributions).toBe(10);
 
 		// Velocity should be positive because growth was positive
 		expect(result.velocityIndexScore).toBeGreaterThan(0);

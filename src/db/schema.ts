@@ -163,8 +163,15 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	recordedAt: timestamp("recorded_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
-	totalWeeklyReach: integer("overall_dau_estimate").notNull(),
-	weeklyReachGrowthPercent: real("overall_dau_growth_percent").notNull().default(0),
-	netNewWeeklyReach: integer("overall_net_new_dau").notNull().default(0),
+	// Visitor metrics
+	totalWeeklyVisitors: integer("total_weekly_visitors").notNull(),
+	visitorGrowthPercent: real("visitor_growth_percent").notNull().default(0),
+	netNewWeeklyVisitors: integer("net_new_weekly_visitors").notNull().default(0),
+	// Contribution metrics
+	totalWeeklyContributions: integer("total_weekly_contributions").notNull().default(0),
+	contributionGrowthPercent: real("contribution_growth_percent").notNull().default(0),
+	netNewWeeklyContributions: integer("net_new_weekly_contributions").notNull().default(0),
+	// ARPU Velocity
 	velocityIndexScore: real("velocity_index_score").notNull(),
 }).enableRLS();
+

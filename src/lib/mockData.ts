@@ -101,9 +101,12 @@ export function generateMockPlatformHistory() {
 		history.push({
 			id: idCounter++,
 			recordedAt: recordedAt.toISOString(),
-			totalWeeklyReach: reach,
-			weeklyReachGrowthPercent: i * 0.08,
-			netNewWeeklyReach: reach - 1200000 * 7,
+			totalWeeklyVisitors: reach,
+			visitorGrowthPercent: i * 0.08,
+			netNewWeeklyVisitors: reach - 1200000 * 7,
+			totalWeeklyContributions: Math.floor(reach * 0.05),
+			contributionGrowthPercent: i * 0.05,
+			netNewWeeklyContributions: Math.floor((reach - 1200000 * 7) * 0.05),
 			velocityIndexScore: velocity,
 		});
 	}
