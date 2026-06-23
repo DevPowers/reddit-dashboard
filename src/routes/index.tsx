@@ -143,8 +143,8 @@ function Dashboard() {
 		}
 
 		return {
-			overallGrowthPercent: latest.overallDauGrowthPercent,
-			overallNetNew: latest.overallNetNewDau,
+			overallGrowthPercent: latest.weeklyReachGrowthPercent,
+			overallNetNew: latest.netNewWeeklyReach,
 			weightedVelocity: latest.velocityIndexScore,
 		};
 	}, [historyToUse]);

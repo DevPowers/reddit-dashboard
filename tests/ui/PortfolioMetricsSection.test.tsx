@@ -64,9 +64,9 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					{
 						id: 1,
 						recordedAt: "2026-06-18T10:00:00Z",
-						overallDauEstimate: 1000000,
-						overallDauGrowthPercent: 0,
-						overallNetNewDau: 0,
+						totalWeeklyReach: 1000000,
+						weeklyReachGrowthPercent: 0,
+						netNewWeeklyReach: 0,
 						velocityIndexScore: 0,
 					},
 				]}
@@ -94,17 +94,17 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					{
 						id: 1,
 						recordedAt: "2026-06-17T10:00:00Z",
-						overallDauEstimate: 100000,
-						overallDauGrowthPercent: 0,
-						overallNetNewDau: 0,
+						totalWeeklyReach: 100000,
+						weeklyReachGrowthPercent: 0,
+						netNewWeeklyReach: 0,
 						velocityIndexScore: 0,
 					},
 					{
 						id: 2,
 						recordedAt: "2026-06-18T10:00:00Z",
-						overallDauEstimate: 110000,
-						overallDauGrowthPercent: 10,
-						overallNetNewDau: 10000,
+						totalWeeklyReach: 110000,
+						weeklyReachGrowthPercent: 10,
+						netNewWeeklyReach: 10000,
 						velocityIndexScore: 2.5,
 					},
 				]}
@@ -129,7 +129,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 		});
 
 		// Open DAU modal
-		const dauButton = screen.getByText("Engagement Index Growth").closest('button');
+		const dauButton = screen.getByText("Weekly Reach Growth").closest('button');
 		act(() => {
 			dauButton?.click();
 		});

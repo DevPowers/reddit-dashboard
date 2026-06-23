@@ -9,7 +9,6 @@ import {
 } from "../db/schema";
 import { eq, ne, gte } from "drizzle-orm";
 import {
-	getQuarterEndBaseline,
 	calculateSubVelocity,
 	normalizeVelocityScore,
 	findClosestToDate,
@@ -56,7 +55,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 	const dedupedData = Array.from(dedupedMap.values());
 
-	// Pre-group all data by subredditId for O(1) lookups (fixes O(N²) filter/sort inside loop)
+	// Pre-group all data by subredditId for O(1) lookups
 	const dataBySubreddit = new Map<number, typeof data>();
 	for (const row of dedupedData) {
 		if (!dataBySubreddit.has(row.subredditId)) {
@@ -65,7 +64,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 		dataBySubreddit.get(row.subredditId)!.push(row);
 	}
 
-	// Pre-sort all subreddit histories once (fixes O(N log N) inside the loop)
+	// Pre-sort all subreddit histories once
 	for (const history of dataBySubreddit.values()) {
 		history.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
 	}
@@ -80,52 +79,25 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 	const latestData = Array.from(latestMap.values());
 
-	// 1.5. Find historical baseline data using shared quarter-end calculation
-	const T0_DATE = getQuarterEndBaseline(new Date());
-	const historicalMap = new Map<number, typeof data[0]>();
-
+	// 2. Find baseline data — earliest record per subreddit
+	// This is the simplest correct approach: baseline is always the earliest scrape we have.
+	// Since all our data is post-quarter-close, this gives us "growth since we started tracking."
+	const baselineMap = new Map<number, typeof data[0]>();
 	for (const row of dedupedData) {
-		const recordedAtDate = new Date(row.recordedAt);
-		if (recordedAtDate <= T0_DATE) {
-			const currentHistorical = historicalMap.get(row.subredditId);
-			if (
-				!currentHistorical ||
-				recordedAtDate > new Date(currentHistorical.recordedAt)
-			) {
-				historicalMap.set(row.subredditId, row);
-			}
+		const existing = baselineMap.get(row.subredditId);
+		if (!existing || new Date(row.recordedAt) < new Date(existing.recordedAt)) {
+			baselineMap.set(row.subredditId, row);
 		}
 	}
 
-	// Fallback: if no data before T0 for a subreddit, use its earliest record
-	const earliestPerSub = new Map<number, typeof data[0]>();
-	for (const row of dedupedData) {
-		const currentEarliest = earliestPerSub.get(row.subredditId);
-		if (
-			!currentEarliest ||
-			new Date(row.recordedAt) < new Date(currentEarliest.recordedAt)
-		) {
-			earliestPerSub.set(row.subredditId, row);
-		}
-	}
-	
-	for (const sub of latestData) {
-		if (!historicalMap.has(sub.subredditId)) {
-			const earliest = earliestPerSub.get(sub.subredditId);
-			if (earliest) {
-				historicalMap.set(sub.subredditId, earliest);
-			}
-		}
-	}
-
-	// 2. Setup 28-day window target for velocity baseline
+	// 3. Setup 28-day window target for velocity baseline
 	const targetDate = new Date();
 	targetDate.setDate(targetDate.getDate() - 28);
 
-	// 3. Aggregate
-	let totalLatestReach = 0; // The absolute reach index
+	// 4. Aggregate
+	let totalLatestReach = 0;
 	let growthNumeratorLatestReach = 0;
-	let growthDenominatorHistoricalReach = 0;
+	let growthDenominatorBaselineReach = 0;
 	let totalWeightedVelocity = 0;
 	let velocityContributorCount = 0;
 
@@ -134,22 +106,24 @@ export const calculateAndSaveMacroMetrics = async () => {
 		totalLatestReach += reach;
 
 		const subHistory = dataBySubreddit.get(sub.subredditId) || [];
+		const baseline = baselineMap.get(sub.subredditId);
 
-		// "Same-Store" Metric Logic:
-		// Only factor subreddits into Growth and Velocity if they have multiple data points to compare.
-		// Otherwise, adding new subreddits dilutes the growth percentages heavily towards 0.
-		if (subHistory.length >= 2) {
-			const hist = historicalMap.get(sub.subredditId);
-			if (hist && hist.id !== sub.id) {
-				const histReach = hist.weeklyVisitors;
-				growthDenominatorHistoricalReach += histReach;
-				growthNumeratorLatestReach += reach;
-			}
+		// "Same-Store" Logic: Only include in growth if the subreddit has data from
+		// at least 2 DISTINCT DATES (not just 2 records which could be same-day duplicates).
+		const distinctDates = new Set(
+			subHistory.map((r) => new Date(r.recordedAt).toISOString().slice(0, 10))
+		);
 
+		if (distinctDates.size >= 2 && baseline) {
+			const baselineReach = baseline.weeklyVisitors;
+			growthDenominatorBaselineReach += baselineReach;
+			growthNumeratorLatestReach += reach;
+
+			// Velocity calculation uses 28-day window
 			const baselinePoint = findClosestToDate(subHistory, targetDate);
 			const baselineWau = baselinePoint ? baselinePoint.weeklyVisitors : sub.weeklyVisitors;
 
-			if (baselinePoint && baselinePoint.id !== sub.id) {
+			if (baselinePoint && new Date(baselinePoint.recordedAt).toISOString().slice(0, 10) !== new Date(sub.recordedAt).toISOString().slice(0, 10)) {
 				const velocity = calculateSubVelocity(
 					sub.weeklyVisitors,
 					baselineWau,
@@ -163,10 +137,10 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 
 	const overallGrowthPercent =
-		growthDenominatorHistoricalReach > 0
-			? ((growthNumeratorLatestReach - growthDenominatorHistoricalReach) / growthDenominatorHistoricalReach) * 100
+		growthDenominatorBaselineReach > 0
+			? ((growthNumeratorLatestReach - growthDenominatorBaselineReach) / growthDenominatorBaselineReach) * 100
 			: 0;
-	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorHistoricalReach;
+	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorBaselineReach;
 
 	// Dynamic normalization instead of magic /100000 constant
 	const velocityIndexScore = normalizeVelocityScore(
@@ -188,9 +162,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 		const [updated] = await db
 			.update(platformHistoricalMetrics)
 			.set({
-				overallDauEstimate: totalLatestReach,
-				overallDauGrowthPercent: overallGrowthPercent,
-				overallNetNewDau: overallNetNewReach,
+				totalWeeklyReach: totalLatestReach,
+				weeklyReachGrowthPercent: overallGrowthPercent,
+				netNewWeeklyReach: overallNetNewReach,
 				velocityIndexScore: velocityIndexScore,
 			})
 			.where(eq(platformHistoricalMetrics.id, existingToday[0].id))
@@ -201,9 +175,9 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)
 		.values({
-			overallDauEstimate: totalLatestReach,
-			overallDauGrowthPercent: overallGrowthPercent,
-			overallNetNewDau: overallNetNewReach,
+			totalWeeklyReach: totalLatestReach,
+			weeklyReachGrowthPercent: overallGrowthPercent,
+			netNewWeeklyReach: overallNetNewReach,
 			velocityIndexScore: velocityIndexScore,
 		})
 		.returning();

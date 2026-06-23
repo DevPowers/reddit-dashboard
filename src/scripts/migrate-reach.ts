@@ -11,11 +11,11 @@ async function run() {
 	let updatedCount = 0;
 
 	for (const row of rows) {
-		console.log(`Checking row ID ${row.id} - Value: ${row.overallDauEstimate}`);
+		console.log(`Checking row ID ${row.id} - Value: ${row.totalWeeklyReach}`);
 		// Just to be ultra-safe, let's only multiply if the value looks like a DAU number 
 		// instead of a massive WAU number. Our mock data base is ~1,200,000 DAU. 
 		// If it's already over 25,000,000 we probably already migrated it.
-		if (row.overallDauEstimate > 25000000) {
+		if (row.totalWeeklyReach > 25000000) {
 			console.log(`Skipping row ID ${row.id} (already migrated)`);
 			continue;
 		}
@@ -23,12 +23,12 @@ async function run() {
 		await db
 			.update(platformHistoricalMetrics)
 			.set({
-				overallDauEstimate: row.overallDauEstimate * 7,
-				overallNetNewDau: row.overallNetNewDau * 7,
+				totalWeeklyReach: row.totalWeeklyReach * 7,
+				netNewWeeklyReach: row.netNewWeeklyReach * 7,
 			})
 			.where(eq(platformHistoricalMetrics.id, row.id));
 
-		console.log(`Updated row ID ${row.id}: ${row.overallDauEstimate} -> ${row.overallDauEstimate * 7}`);
+		console.log(`Updated row ID ${row.id}: ${row.totalWeeklyReach} -> ${row.totalWeeklyReach * 7}`);
 		updatedCount++;
 	}
 

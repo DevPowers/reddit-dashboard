@@ -101,9 +101,9 @@ export function generateMockPlatformHistory() {
 		history.push({
 			id: idCounter++,
 			recordedAt: recordedAt.toISOString(),
-			overallDauEstimate: reach,
-			overallDauGrowthPercent: i * 0.08,
-			overallNetNewDau: reach - 1200000 * 7,
+			totalWeeklyReach: reach,
+			weeklyReachGrowthPercent: i * 0.08,
+			netNewWeeklyReach: reach - 1200000 * 7,
 			velocityIndexScore: velocity,
 		});
 	}

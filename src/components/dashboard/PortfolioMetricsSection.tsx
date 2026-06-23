@@ -16,9 +16,9 @@ import {
 interface HistoricalMetric {
 	id: number;
 	recordedAt: Date | string;
-	overallDauEstimate: number;
-	overallDauGrowthPercent: number;
-	overallNetNewDau: number;
+	totalWeeklyReach: number;
+	weeklyReachGrowthPercent: number;
+	netNewWeeklyReach: number;
 	velocityIndexScore: number;
 }
 
@@ -63,8 +63,8 @@ export function PortfolioMetricsSection({
 		);
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"Engagement Index": row.overallDauEstimate,
-			"Percent Growth": Number(row.overallDauGrowthPercent.toFixed(2)),
+			"Net New Users": row.netNewWeeklyReach,
+			"Percent Growth": Number(row.weeklyReachGrowthPercent.toFixed(2)),
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
 	}, [platformHistory]);
@@ -82,7 +82,7 @@ export function PortfolioMetricsSection({
 						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Engagement Index Growth
+						Weekly Reach Growth
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -96,7 +96,7 @@ export function PortfolioMetricsSection({
 						<span className="text-text-main font-medium">
 							{portfolioMetrics.overallNetNew > 0 ? "+" : ""}{portfolioMetrics.overallNetNew.toLocaleString()}
 						</span>{" "}
-						net new estimated weekly reach
+						net new weekly users vs quarter baseline
 					</div>
 				</button>
 
@@ -211,7 +211,7 @@ export function PortfolioMetricsSection({
 					>
 						<div className="flex items-center justify-between p-6 border-b border-obsidian-border bg-obsidian-light">
 							<h3 className="text-xl font-bold text-white">
-								{openModal === "dau" ? "Engagement Index Trend" : "ARPU Velocity Trend"}
+								{openModal === "dau" ? "Weekly Reach Trend" : "ARPU Velocity Trend"}
 							</h3>
 							<button 
 								onClick={() => setOpenModal(null)}
@@ -256,7 +256,7 @@ export function PortfolioMetricsSection({
 										<Line
 											yAxisId="left"
 											type="monotone"
-											dataKey={openModal === "dau" ? "Engagement Index" : "Velocity Index"}
+											dataKey={openModal === "dau" ? "Net New Users" : "Velocity Index"}
 											stroke={openModal === "dau" ? "var(--color-orangered)" : "var(--color-chart-1)"}
 											strokeWidth={3}
 											dot={false}

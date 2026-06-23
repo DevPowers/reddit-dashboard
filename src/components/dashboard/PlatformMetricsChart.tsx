@@ -14,7 +14,8 @@ import {
 interface HistoricalMetric {
 	id: number;
 	recordedAt: Date | string;
-	overallDauEstimate: number;
+	totalWeeklyReach: number;
+	netNewWeeklyReach: number;
 	velocityIndexScore: number;
 }
 
@@ -31,7 +32,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 
 		return sorted.map((row) => ({
 			date: format(new Date(row.recordedAt), "MMM dd"),
-			"Engagement Index": row.overallDauEstimate,
+			"Net New Users": row.netNewWeeklyReach,
 			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
 		}));
 	}, [data]);
@@ -68,7 +69,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 							tickLine={false}
 						/>
 						
-						{/* Left Y-Axis for DAU */}
+						{/* Left Y-Axis for Net New Users */}
 						<YAxis
 							yAxisId="left"
 							stroke="#6366F1"
@@ -108,6 +109,9 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 								if (name === "Velocity Index") {
 									return [value > 0 ? `+${value}` : value, name];
 								}
+								if (name === "Net New Users") {
+									return [Number(value).toLocaleString(), name];
+								}
 								return [Number(value).toLocaleString(), name];
 							}}
 						/>
@@ -119,7 +123,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 						<Line
 							yAxisId="left"
 							type="monotone"
-							dataKey="Engagement Index"
+							dataKey="Net New Users"
 							stroke="#6366F1"
 							strokeWidth={3}
 							dot={false}
