@@ -25,6 +25,7 @@ export const getSubredditMetrics = createServerFn({ method: "GET" })
 				errorMessage: cronSubredditLogs.errorMessage,
 				httpCode: cronSubredditLogs.httpCode,
 				usedPremium: cronSubredditLogs.usedPremium,
+				provider: cronSubredditLogs.provider,
 				durationMs: cronSubredditLogs.durationMs,
 				ranAt: cronSubredditLogs.ranAt,
 			})

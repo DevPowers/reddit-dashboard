@@ -100,7 +100,7 @@ export function PortfolioMetricsSection({
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
-						<span className="w-1.5 h-1.5 rounded-full bg-success" />
+						<span className="w-1.5 h-1.5 rounded-full bg-orangered" />
 						<span className="text-text-main font-medium">
 							{portfolioMetrics.netNewVisitors > 0 ? "+" : ""}{portfolioMetrics.netNewVisitors.toLocaleString()}
 						</span>{" "}
