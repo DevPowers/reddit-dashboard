@@ -35,4 +35,5 @@ jobs:
           SCRAPER_API_KEY_2: ${{ secrets.SCRAPER_API_KEY_2 }}
           SCRAPER_API_KEY_3: ${{ secrets.SCRAPER_API_KEY_3 }}
           SCRAPER_API_KEY_4: ${{ secrets.SCRAPER_API_KEY_4 }}
+          ZENROWS_API_KEY: ${{ secrets.ZENROWS_API_KEY }}
         run: pnpm run cron
