@@ -273,6 +273,10 @@ export const runScrapeCycle = async () => {
 				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 				const useZenRows = sub.consecutiveFailures >= 2 && process.env.ZENROWS_API_KEY;
 
+				if (sub.consecutiveFailures >= 2 && !process.env.ZENROWS_API_KEY) {
+					logger.warn("Cron", `[Attempt ${sub.consecutiveFailures + 1}] r/${sub.name} has 2+ consecutive failures, but ZENROWS_API_KEY is missing. Falling back to ScraperAPI Premium.`);
+				}
+
 				if (useZenRows) {
 					scraperUrl = `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&js_render=true&premium_proxy=true`;
 				} else if (usePremium) {
