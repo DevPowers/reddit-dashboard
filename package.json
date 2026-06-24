@@ -11,7 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "cron": "npx tsx src/scripts/run-scraper.ts",
+    "cron": "npx tsx src/jobs/github-action-scraper.ts",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
