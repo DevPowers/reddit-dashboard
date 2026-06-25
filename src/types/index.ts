@@ -5,20 +5,12 @@ export enum Category {
 	WORLD_GROWTH = "world_growth",
 	AI_CANNIBALISM = "ai_cannibalism",
 	PERSONAL_TRACKING = "personal_tracking",
-}
-
-export enum ArpuExpectation {
-	HIGH = "high",
-	MEDIUM = "medium",
-	LOW = "low",
+	SPORTS = "sports",
 }
 
 export interface TrackedGroup {
 	category: Category;
 	subCategory: string; // e.g., "Meta", "Gaming", or "United States"
-	monetizationWeight: number;
-	arpuMultiplier: number;
-	arpuExpectation?: ArpuExpectation;
 	population?: number;
 	subreddits: string[];
 }
@@ -29,9 +21,6 @@ export interface MetricData {
 	name: string;
 	category: string;
 	subCategory: string;
-	monetizationWeight: number;
-	arpuMultiplier: number;
-	arpuExpectation: string | null;
 	population: number | null;
 	weeklyVisitors: number;
 	weeklyContributions: number;

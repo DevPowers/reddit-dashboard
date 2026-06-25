@@ -29,9 +29,6 @@ export const trackingGroups = pgTable("tracking_groups", {
 	id: serial("id").primaryKey(),
 	category: varchar("category", { length: 50 }).notNull(),
 	subCategory: varchar("sub_category", { length: 100 }).notNull().unique(),
-	monetizationWeight: real("monetization_weight").notNull(),
-	arpuExpectation: varchar("arpu_expectation", { length: 50 }),
-	arpuMultiplier: real("arpu_multiplier").notNull().default(1.0),
 	population: integer("population"),
 }).enableRLS();
 

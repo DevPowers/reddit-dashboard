@@ -8,8 +8,6 @@ interface MetricData {
 	name: string;
 	category: string;
 	subCategory: string;
-	monetizationWeight: number;
-	arpuExpectation: string | null;
 	population: number | null;
 	weeklyVisitors: number;
 	weeklyContributions: number;

@@ -23,11 +23,8 @@ describe("Macro Metrics Math Scenarios", () => {
 
 		// Seed a tracking group for our mock subreddits
 		await mockDb.insert(schema.trackingGroups).values({
-			name: "High Value Ad Verticals",
 			category: Category.HIGH_VALUE_AD_VERTICALS,
 			subCategory: "Gaming",
-			monetizationWeight: 1.0,
-			arpuMultiplier: 2.0,
 		});
 	});
 

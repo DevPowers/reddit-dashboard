@@ -39,12 +39,15 @@ export function getQuarterEndBaseline(today: Date): Date {
 export function calculateSubVelocity(
 	currentWAU: number,
 	baselineWAU: number,
-	arpuMultiplier: number,
-	monetizationWeight: number,
 ): number {
 	if (baselineWAU <= 0) return 0;
 	const pctChange = (currentWAU - baselineWAU) / baselineWAU;
-	return pctChange * arpuMultiplier * monetizationWeight;
+	
+	// Option B: Pure Unweighted Engagement Momentum
+	// Velocity is now exactly equal to the percentage change of the subreddit.
+	// When averaged together, this gives us the "Average Community Growth"
+	// where every subreddit has an equal vote, regardless of its size or ARPU.
+	return pctChange;
 }
 
 /**
@@ -57,9 +60,12 @@ export function normalizeVelocityScore(
 	contributingCount: number,
 ): number {
 	if (contributingCount <= 0) return 0;
-	const average = totalVelocity / contributingCount;
-	// Scale factor: typical average velocity is ~0.1-1.0, multiply by 10
-	const scaled = average * 10;
+	// Since velocity is now pure percentage (e.g., 0.05 for 5%), 
+	// multiplying by 100 converts it directly to a percentage-point score.
+	// So 5% average growth = 5.0 score. 
+	// Clamping at [-10, 10] means any average growth > 10% maxes out the index.
+	const averagePct = totalVelocity / contributingCount;
+	const scaled = averagePct * 100;
 	return Math.max(-10, Math.min(10, scaled));
 }
 

@@ -2,10 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
-import { ArpuExpectation, Category, type MetricData } from "../types";
-import {
-	getQuarterEndBaseline,
-} from "../lib/calculations";
+import { Category, type MetricData } from "../types";
+
 
 // Import Refactored View Components
 import { PortfolioMetricsSection } from "../components/dashboard/PortfolioMetricsSection";
@@ -28,37 +26,41 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
 	const { metrics: serverData, platformHistory } = Route.useLoaderData();
-	const [activeTier, setActiveTier] = useState<
-		"high" | "medium" | "low" | null
-	>(null);
 	const [selectedCategory, setSelectedCategory] = useState<Category>(
 		Category.GEOGRAPHY,
 	);
 
-	// Synchronize state: Category changes clear the tier filter
 	const handleCategoryChange = (cat: Category) => {
 		setSelectedCategory(cat);
-		setActiveTier(null); // Clear ARPU tier so accordion updates
-	};
-
-	// Synchronize state: Tier changes force category to GEOGRAPHY
-	const handleTierChange = (tier: "high" | "medium" | "low" | null) => {
-		setActiveTier(tier);
-		if (tier) setSelectedCategory(Category.GEOGRAPHY);
 	};
 
 	// Determine data source
 	const dataToUse: MetricData[] = serverData;
 	const historyToUse = platformHistory;
 
+	// Deduplicate overlapping subreddits (e.g. r/gaming) on the client side
+	// to prevent double-counting in charts and accordions.
+	const dedupedDataToUse = useMemo(() => {
+		const map = new Map<string, MetricData>();
+		for (const row of dataToUse) {
+			const key = `${row.subredditId}-${new Date(row.recordedAt).getTime()}`;
+			const existing = map.get(key);
+
+			if (!existing) {
+				map.set(key, row);
+			}
+		}
+		return Array.from(map.values());
+	}, [dataToUse]);
+
 	// The rest of the data crunching logic remains identical to calculate growth, etc.
 	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
 		const latestMap = new Map<number, MetricData>();
-		const historicalMap = new Map<number, MetricData>();
+		const earliestMap = new Map<number, MetricData>();
 
-		const T0_DATE = getQuarterEndBaseline(new Date());
-
-		for (const row of dataToUse) {
+		// Use "earliest record per sub" as baseline — matches macro.ts server-side logic.
+		// This avoids the quarter-end baseline inconsistency where no data exists before T0.
+		for (const row of dedupedDataToUse) {
 			const recordedAtDate = new Date(row.recordedAt);
 
 			const currentLatest = latestMap.get(row.subredditId);
@@ -69,50 +71,25 @@ function Dashboard() {
 				latestMap.set(row.subredditId, row);
 			}
 
-			if (recordedAtDate <= T0_DATE) {
-				const currentHistorical = historicalMap.get(row.subredditId);
-				if (
-					!currentHistorical ||
-					recordedAtDate > new Date(currentHistorical.recordedAt)
-				) {
-					historicalMap.set(row.subredditId, row);
-				}
+			const currentEarliest = earliestMap.get(row.subredditId);
+			if (
+				!currentEarliest ||
+				recordedAtDate < new Date(currentEarliest.recordedAt)
+			) {
+				earliestMap.set(row.subredditId, row);
 			}
 		}
 
-		let actualBaselineDate = T0_DATE;
-
-		// Fallback for T0: If no data exists before T0_DATE, find the EARLIEST record in the dataset.
-		if (historicalMap.size === 0 && dataToUse.length > 0) {
-			const earliestPerSub = new Map<number, MetricData>();
-			let globalEarliest: Date | null = null;
-
-			for (const row of dataToUse) {
-				const rowDate = new Date(row.recordedAt);
-				if (!globalEarliest || rowDate < globalEarliest) {
-					globalEarliest = rowDate;
-				}
-
-				const currentEarliest = earliestPerSub.get(row.subredditId);
-				if (
-					!currentEarliest ||
-					new Date(row.recordedAt) < new Date(currentEarliest.recordedAt)
-				) {
-					earliestPerSub.set(row.subredditId, row);
-				}
-			}
-			for (const [subId, row] of earliestPerSub.entries()) {
-				historicalMap.set(subId, row);
-			}
-
-			if (globalEarliest) {
-				actualBaselineDate = globalEarliest;
-			}
+		// Find earliest global date for display
+		let globalEarliest: Date | null = null;
+		for (const row of earliestMap.values()) {
+			const d = new Date(row.recordedAt);
+			if (!globalEarliest || d < globalEarliest) globalEarliest = d;
 		}
 
-		// Calculate individual growth
+		// Calculate individual growth using same-store logic (earliest baseline)
 		const latestList = Array.from(latestMap.values()).map((latest) => {
-			const hist = historicalMap.get(latest.subredditId);
+			const hist = earliestMap.get(latest.subredditId);
 			let growth = 0;
 			if (hist && hist.weeklyVisitors > 0) {
 				growth =
@@ -125,8 +102,8 @@ function Dashboard() {
 
 		return {
 			latestData: latestList,
-			historicalData: Array.from(historicalMap.values()),
-			baselineDateStr: format(actualBaselineDate, "MMMM d, yyyy")
+			historicalData: Array.from(earliestMap.values()),
+			baselineDateStr: globalEarliest ? format(globalEarliest, "MMMM d, yyyy") : "N/A"
 		};
 	}, [dataToUse]);
 
@@ -153,30 +130,11 @@ function Dashboard() {
 		};
 	}, [historyToUse]);
 
-	// Calculate ARPU Tier Aggregates
-	const arpuAggregates = useMemo(() => {
-		const calcTierGrowth = (tier: string) => {
-			const subs = latestData.filter(
-				(s) => s.category === Category.GEOGRAPHY && s.arpuExpectation === tier
-			);
-			if (subs.length === 0) return 0;
-			const totalGrowth = subs.reduce(
-				(sum, sub) => sum + (sub.growthPercent || 0),
-				0,
-			);
-			return totalGrowth / subs.length;
-		};
 
-		return {
-			high: calcTierGrowth(ArpuExpectation.HIGH),
-			medium: calcTierGrowth(ArpuExpectation.MEDIUM),
-			low: calcTierGrowth(ArpuExpectation.LOW),
-		};
-	}, [latestData]);
 
 	// Generate Chart Data for selected category (Time-series)
 	const chartData = useMemo(() => {
-		const filteredData = dataToUse.filter((d) => d.category === selectedCategory);
+		const filteredData = dedupedDataToUse.filter((d) => d.category === selectedCategory);
 
 		// Optimize historicalData lookup
 		const histMap = new Map();
@@ -199,13 +157,7 @@ function Dashboard() {
 			// Use earliest timestamp for this date as the sort key
 			entry.sortKey = Math.min(entry.sortKey, recordedDate.getTime());
 
-			let lineName: string;
-			if (selectedCategory === Category.GEOGRAPHY) {
-				const arpu = row.arpuExpectation;
-				lineName = arpu ? `${arpu.charAt(0).toUpperCase() + arpu.slice(1)} ARPU` : "Unknown ARPU";
-			} else {
-				lineName = row.subCategory;
-			}
+			const lineName = row.subCategory;
 
 			uniqueLines.add(lineName);
 
@@ -244,7 +196,6 @@ function Dashboard() {
 	// Generate Accordion Data grouped by Sub-Category
 	const accordionData = useMemo(() => {
 		const filtered = latestData.filter((d) => {
-			if (activeTier) return d.arpuExpectation === activeTier;
 			return d.category === selectedCategory;
 		});
 
@@ -265,7 +216,7 @@ function Dashboard() {
 				return { groupName, items, avgGrowth };
 			})
 			.sort((a, b) => b.avgGrowth - a.avgGrowth); // Sort groups by avg growth descending
-	}, [latestData, selectedCategory, activeTier]);
+	}, [latestData, selectedCategory]);
 
 	const colors = useMemo(() => [
 		"var(--color-chart-1)",
@@ -301,14 +252,10 @@ function Dashboard() {
 
 			<PortfolioMetricsSection 
 				portfolioMetrics={portfolioMetrics}
-				arpuAggregates={arpuAggregates}
-				activeTier={activeTier}
-				setActiveTier={handleTierChange}
 				platformHistory={historyToUse}
 			/>
 
 			<GeographicTrendsSection 
-				activeTier={activeTier}
 				selectedCategory={selectedCategory}
 				setSelectedCategory={handleCategoryChange}
 				chartData={chartData}

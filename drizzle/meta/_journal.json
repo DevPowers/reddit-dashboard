@@ -57,6 +57,13 @@
       "when": 1781847251000,
       "tag": "0007_visitor_contributor_split",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781850000000,
+      "tag": "0008_drop_arpu",
+      "breakpoints": true
     }
   ]
 }

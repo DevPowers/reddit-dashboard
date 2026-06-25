@@ -22,18 +22,12 @@ async function seed() {
 			.values({
 				category: group.category,
 				subCategory: group.subCategory,
-				monetizationWeight: group.monetizationWeight,
-				arpuExpectation: group.arpuExpectation,
-				arpuMultiplier: group.arpuMultiplier,
 				population: group.population,
 			})
 			.onConflictDoUpdate({
 				target: trackingGroups.subCategory,
 				set: {
 					category: group.category,
-					monetizationWeight: group.monetizationWeight,
-					arpuExpectation: group.arpuExpectation,
-					arpuMultiplier: group.arpuMultiplier,
 					population: group.population,
 				},
 			})

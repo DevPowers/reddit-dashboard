@@ -214,3 +214,7 @@ export function RouteComponent() {
 
 ## Git & Deployment Protocol
 - **No Automatic Pushing**: Never run `git push` automatically without explicit permission. Only push code when the user explicitly asks you to push. Always provide a walkthrough or diff of changes before requesting to push.
+
+## Cron Execution Context
+- **GitHub Actions Isolation**: The `pnpm run cron` command executes on a **GitHub Actions** runner via `.github/workflows/scraper.yml`, NOT on Vercel. 
+- **Environment Variables**: The cron runner is completely isolated from Vercel's environment variables. Any required API keys (e.g., `ZENROWS_API_KEY`) MUST be explicitly stored in **GitHub Repository Secrets** and mapped to the `env` block inside `scraper.yml`. If an environment variable is only added to Vercel, the GitHub Action will fail silently or fallback.

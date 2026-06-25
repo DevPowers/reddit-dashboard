@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { eq, ne, asc } from "drizzle-orm";
+import { eq, asc, notInArray } from "drizzle-orm";
 import { db } from "../db/index.server";
 import { Category } from "../types";
 import {
@@ -20,9 +20,6 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 				name: subreddits.name,
 				category: trackingGroups.category,
 				subCategory: trackingGroups.subCategory,
-				monetizationWeight: trackingGroups.monetizationWeight,
-				arpuExpectation: trackingGroups.arpuExpectation,
-				arpuMultiplier: trackingGroups.arpuMultiplier,
 				population: trackingGroups.population,
 				weeklyVisitors: metricsHistory.weeklyVisitors,
 				weeklyContributions: metricsHistory.weeklyContributions,
@@ -38,7 +35,7 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 				trackingGroups,
 				eq(subredditGroups.groupId, trackingGroups.id),
 			)
-			.where(ne(trackingGroups.category, Category.PERSONAL_TRACKING));
+			.where(notInArray(trackingGroups.category, [Category.PERSONAL_TRACKING, Category.SPORTS]));
 
 		return data;
 	},

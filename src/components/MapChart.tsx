@@ -9,20 +9,7 @@ import {
 
 const geoUrl = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
-// We map ISO alpha-3 country names based on the tiers
-export const TIER_COUNTRIES: Record<string, string[]> = {
-	high: [
-		"United States of America",
-		"United Kingdom",
-		"Canada",
-		"Germany",
-		"France",
-		"Japan",
-		"Australia",
-	],
-	medium: ["Brazil", "Mexico", "Spain", "Italy"],
-	low: ["India", "Philippines"],
-};
+
 
 // Coordinate mapping for markers [longitude, latitude]
 const COUNTRY_MARKERS = [
@@ -41,12 +28,8 @@ const COUNTRY_MARKERS = [
 	{ name: "PH", coordinates: [121.7740, 12.8797] as [number, number] },
 ];
 
-export default function MapChart({
-	activeTier,
-}: {
-	activeTier: "high" | "medium" | "low" | null;
-}) {
-	const highlighted = activeTier ? TIER_COUNTRIES[activeTier] : [];
+export default function MapChart() {
+	const highlighted: string[] = [];
 	const [position, setPosition] = useState({
 		coordinates: [0, 20] as [number, number],
 		zoom: 1,

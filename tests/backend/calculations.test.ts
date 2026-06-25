@@ -34,32 +34,28 @@ describe('Calculations Utilities', () => {
 	});
 
 	describe('calculateSubVelocity', () => {
-		it('should calculate percentage-based velocity correctly', () => {
+		it('should calculate pure percentage-based velocity correctly', () => {
 			const current = 110;
 			const baseline = 100;
-			const arpuMult = 2.0;
-			const monWeight = 3.0;
-			
-			// Growth = 10% -> 0.1 * 2.0 * 3.0 = 0.6
-			const result = calculateSubVelocity(current, baseline, arpuMult, monWeight);
-			expect(result).toBeCloseTo(0.6);
+			const result = calculateSubVelocity(current, baseline);
+			expect(result).toBeCloseTo(0.1);
 		});
 
 		it('should return 0 if baseline is 0 or negative', () => {
-			const result = calculateSubVelocity(100, 0, 1.0, 1.0);
+			const result = calculateSubVelocity(100, 0);
 			expect(result).toBe(0);
 		});
 
 		it('should handle negative growth', () => {
-			const result = calculateSubVelocity(90, 100, 1.0, 1.0);
+			const result = calculateSubVelocity(90, 100);
 			expect(result).toBeCloseTo(-0.1);
 		});
 	});
 
 	describe('normalizeVelocityScore', () => {
-		it('should scale average velocity by 10', () => {
-			// Total = 2.0, count = 4 -> Avg = 0.5 -> Scaled = 5.0
-			const result = normalizeVelocityScore(2.0, 4);
+		it('should scale average percentage by 100 to create a score', () => {
+			// Total = 0.20 (20%), count = 4 -> Avg = 0.05 (5%) -> Scaled = 5.0
+			const result = normalizeVelocityScore(0.20, 4);
 			expect(result).toBe(5.0);
 		});
 

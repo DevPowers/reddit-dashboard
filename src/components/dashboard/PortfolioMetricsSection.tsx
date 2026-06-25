@@ -33,13 +33,7 @@ interface PortfolioMetricsSectionProps {
 		netNewContributions: number;
 		weightedVelocity: number;
 	};
-	arpuAggregates: {
-		high: number;
-		medium: number;
-		low: number;
-	};
-	activeTier: "high" | "medium" | "low" | null;
-	setActiveTier: (tier: "high" | "medium" | "low" | null) => void;
+
 	platformHistory?: HistoricalMetric[];
 }
 
@@ -54,9 +48,6 @@ const getVelocityColorClass = (velocity: number) => {
 
 export function PortfolioMetricsSection({
 	portfolioMetrics,
-	arpuAggregates,
-	activeTier,
-	setActiveTier,
 	platformHistory = [],
 }: PortfolioMetricsSectionProps) {
 	const [openModal, setOpenModal] = useState<"visitors" | "contributions" | "velocity" | null>(null);
@@ -90,7 +81,7 @@ export function PortfolioMetricsSection({
 						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Weekly Visitor Growth
+						Weekly Visitor Growth (Reach-Weighted)
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -104,7 +95,7 @@ export function PortfolioMetricsSection({
 						<span className="text-text-main font-medium">
 							{portfolioMetrics.netNewVisitors > 0 ? "+" : ""}{portfolioMetrics.netNewVisitors.toLocaleString()}
 						</span>{" "}
-						net new weekly visitors vs quarter baseline
+						net new weekly visitors vs earliest baseline
 					</div>
 				</button>
 
@@ -118,7 +109,7 @@ export function PortfolioMetricsSection({
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-2/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Weekly Contributor Growth
+						Weekly Contributor Growth (Reach-Weighted)
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -132,7 +123,7 @@ export function PortfolioMetricsSection({
 						<span className="text-text-main font-medium">
 							{portfolioMetrics.netNewContributions > 0 ? "+" : ""}{portfolioMetrics.netNewContributions.toLocaleString()}
 						</span>{" "}
-						net new weekly contributions vs quarter baseline
+						net new weekly contributions vs earliest baseline
 					</div>
 				</button>
 			</div>
@@ -148,11 +139,15 @@ export function PortfolioMetricsSection({
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-1/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
 					<h3 className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5">
-						ARPU Velocity Index
+						Average Community Growth
 						<div className="relative flex items-center group/tooltip">
 							<Info size={14} className="text-text-muted opacity-70 hover:opacity-100 transition-opacity" />
 							<div className="absolute top-full left-0 mt-2 w-64 p-3 bg-obsidian border border-obsidian-border rounded-md shadow-2xl text-xs text-text-main opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all pointer-events-none z-20 text-left font-normal leading-relaxed">
-								<div className="font-bold mb-1">Scale: -10 to 10</div>
+								<div className="font-bold mb-1">🎯 What does this mean?</div>
+								<div className="text-text-muted mb-2">
+									It measures the 'breadth' of growth across Reddit. It calculates the % growth of each individual subreddit and averages them together. Every community gets an equal vote!
+								</div>
+								<div className="font-bold mb-1 mt-2 border-t border-obsidian-border pt-2">Scale: -10 to 10</div>
 								<div className="text-text-muted">
 									<span className="text-emerald-300">8 to 10 = Exceptional</span><br/>
 									<span className="text-emerald-400">4 to 7 = Strong Growth</span><br/>
@@ -160,9 +155,6 @@ export function PortfolioMetricsSection({
 									<span className="text-text-muted">0 = Flat Growth</span><br/>
 									<span className="text-red-400">-1 to -3 = Modest Decline</span><br/>
 									<span className="text-red-500">-4 to -10 = Severe Decline</span>
-								</div>
-								<div className="mt-2 text-[10px] text-text-muted italic opacity-80">
-									*Velocity is heavily weighted by ARPU potential.
 								</div>
 							</div>
 						</div>
@@ -177,66 +169,12 @@ export function PortfolioMetricsSection({
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-chart-1" />
-						Normalized Revenue Momentum Score
+						Normalized Average Community Growth
 					</div>
 				</button>
 			</div>
 
-			{/* Tier 1: Aggregate ARPU KPI Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-2">
-				<button
-					type="button"
-					onClick={() => setActiveTier(activeTier === "high" ? null : "high")}
-					className={`dash-card p-6 border-t-4 border-t-amber-300 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "high" ? "ring-2 ring-amber-300 bg-obsidian-light" : ""}`}
-				>
-					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
-						High ARPU
-					</h3>
-					<div
-						className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.high)}`}
-					>
-						{formatGrowth(arpuAggregates.high)}
-					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
-				</button>
 
-				<button
-					type="button"
-					onClick={() =>
-						setActiveTier(activeTier === "medium" ? null : "medium")
-					}
-					className={`dash-card p-6 border-t-4 border-t-slate-400 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "medium" ? "ring-2 ring-slate-400 bg-obsidian-light" : ""}`}
-				>
-					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-						Medium ARPU
-					</h3>
-					<div
-						className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.medium)}`}
-					>
-						{formatGrowth(arpuAggregates.medium)}
-					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
-				</button>
-
-				<button
-					type="button"
-					onClick={() => setActiveTier(activeTier === "low" ? null : "low")}
-					className={`dash-card p-6 border-t-4 border-t-amber-700 text-left transition-all hover:-translate-y-1 cursor-pointer ${activeTier === "low" ? "ring-2 ring-amber-700 bg-obsidian-light" : ""}`}
-				>
-					<h3 className="dash-title flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-amber-700" />
-						Low ARPU
-					</h3>
-					<div
-						className={`mt-2 dash-value ${getGrowthColorClass(arpuAggregates.low)}`}
-					>
-						{formatGrowth(arpuAggregates.low)}
-					</div>
-					<p className="text-xs text-text-muted mt-1">Average Growth vs Prev Quarter</p>
-				</button>
-			</div>
 
 			{/* Modal Overlay */}
 			{openModal && (

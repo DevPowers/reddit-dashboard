@@ -7,7 +7,7 @@ import {
 	trackingGroups,
 	platformHistoricalMetrics,
 } from "../db/schema";
-import { eq, ne, gte } from "drizzle-orm";
+import { eq, gte, notInArray } from "drizzle-orm";
 import {
 	calculateSubVelocity,
 	normalizeVelocityScore,
@@ -19,8 +19,6 @@ export const calculateAndSaveMacroMetrics = async () => {
 		.select({
 			id: metricsHistory.id,
 			subredditId: subreddits.id,
-			monetizationWeight: trackingGroups.monetizationWeight,
-			arpuMultiplier: trackingGroups.arpuMultiplier,
 			weeklyVisitors: metricsHistory.weeklyVisitors,
 			weeklyContributions: metricsHistory.weeklyContributions,
 			recordedAt: metricsHistory.recordedAt,
@@ -35,7 +33,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 			trackingGroups,
 			eq(subredditGroups.groupId, trackingGroups.id),
 		)
-		.where(ne(trackingGroups.category, Category.PERSONAL_TRACKING));
+		.where(notInArray(trackingGroups.category, [Category.PERSONAL_TRACKING, Category.SPORTS]));
 
 	// Pre-dedupe overlapping subreddits that exist in multiple tracking groups (e.g. r/gaming)
 	// For any given data point, we keep the one with the highest combined monetization rating
@@ -46,12 +44,6 @@ export const calculateAndSaveMacroMetrics = async () => {
 
 		if (!existing) {
 			dedupedMap.set(key, row);
-		} else {
-			const rowRating = row.monetizationWeight * row.arpuMultiplier;
-			const existingRating = existing.monetizationWeight * existing.arpuMultiplier;
-			if (rowRating > existingRating) {
-				dedupedMap.set(key, row);
-			}
 		}
 	}
 	const dedupedData = Array.from(dedupedMap.values());
@@ -136,8 +128,6 @@ export const calculateAndSaveMacroMetrics = async () => {
 				const velocity = calculateSubVelocity(
 					sub.weeklyVisitors,
 					baselineWau,
-					sub.arpuMultiplier,
-					sub.monetizationWeight,
 				);
 				totalWeightedVelocity += velocity;
 				velocityContributorCount++;

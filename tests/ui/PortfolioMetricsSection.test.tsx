@@ -33,9 +33,6 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewContributions: 0,
 					weightedVelocity: 0,
 				}}
-				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
-				activeTier={null}
-				setActiveTier={() => {}}
 				platformHistory={[]}
 			/>
 		);
@@ -60,9 +57,6 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewContributions: 0,
 					weightedVelocity: 0,
 				}}
-				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
-				activeTier={null}
-				setActiveTier={() => {}}
 				platformHistory={[
 					{
 						id: 1,
@@ -95,9 +89,6 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewContributions: 1000,
 					weightedVelocity: 2.5,
 				}}
-				arpuAggregates={{ high: 0, medium: 0, low: 0 }}
-				activeTier={null}
-				setActiveTier={() => {}}
 				platformHistory={[
 					{
 						id: 1,
@@ -126,7 +117,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 		);
 
 		// Open the modal to render the charts
-		const velocityButton = screen.getByText("ARPU Velocity Index").closest('button');
+		const velocityButton = screen.getByText("Average Community Growth").closest('button');
 		act(() => {
 			velocityButton?.click();
 		});
@@ -142,7 +133,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 			closeButton.click();
 		});
 
-		const dauButton = screen.getByText("Weekly Visitor Growth").closest('button');
+		const dauButton = screen.getByText("Weekly Visitor Growth (Reach-Weighted)").closest('button');
 		act(() => {
 			dauButton?.click();
 		});

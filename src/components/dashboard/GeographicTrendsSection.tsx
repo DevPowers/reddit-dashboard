@@ -47,7 +47,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 interface GeographicTrendsSectionProps {
-	activeTier: "high" | "medium" | "low" | null;
+
 	selectedCategory: Category;
 	setSelectedCategory: (cat: Category) => void;
 	chartData: {
@@ -58,7 +58,7 @@ interface GeographicTrendsSectionProps {
 }
 
 export function GeographicTrendsSection({
-	activeTier,
+
 	selectedCategory,
 	setSelectedCategory,
 	chartData,
@@ -68,7 +68,7 @@ export function GeographicTrendsSection({
 		<>
 			{/* Tier 2: Dynamic Map Component */}
 			<div className="mb-8 p-4 bg-obsidian/50 border border-obsidian-border rounded-xl flex justify-center">
-				<MapChart activeTier={activeTier} />
+				<MapChart />
 			</div>
 
 			{/* Tier 3: Main Stage Recharts */}

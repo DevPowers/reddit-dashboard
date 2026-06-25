@@ -114,9 +114,6 @@ export const runScrapeCycle = async () => {
 			groupsToInsert.push({
 				category: group.category,
 				subCategory: group.subCategory,
-				monetizationWeight: group.monetizationWeight,
-				arpuExpectation: group.arpuExpectation,
-				arpuMultiplier: group.arpuMultiplier,
 				population: group.population,
 			});
 			groupNameToSubsMap.set(group.subCategory, group.subreddits);
@@ -136,9 +133,6 @@ export const runScrapeCycle = async () => {
 				target: trackingGroups.subCategory,
 				set: {
 					category: sql`EXCLUDED.category`,
-					monetizationWeight: sql`EXCLUDED.monetization_weight`,
-					arpuExpectation: sql`EXCLUDED.arpu_expectation`,
-					arpuMultiplier: sql`EXCLUDED.arpu_multiplier`,
 					population: sql`EXCLUDED.population`,
 				},
 			})
