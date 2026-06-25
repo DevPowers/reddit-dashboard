@@ -75,7 +75,7 @@ export function PortfolioMetricsSection({
 				<button 
 					type="button"
 					onClick={() => setOpenModal("visitors")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card z-10 hover:z-50 p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-orangered/20 shadow-[0_4px_20px_rgba(255,69,0,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
@@ -112,7 +112,7 @@ export function PortfolioMetricsSection({
 				<button 
 					type="button"
 					onClick={() => setOpenModal("contributions")}
-					className="dash-card p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-2/20 shadow-[0_4px_20px_rgba(46,204,113,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card z-10 hover:z-50 p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-2/20 shadow-[0_4px_20px_rgba(46,204,113,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-2/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
@@ -151,7 +151,7 @@ export function PortfolioMetricsSection({
 				<button
 					type="button"
 					onClick={() => setOpenModal("velocity")}
-					className="dash-card w-full p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-1/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
+					className="dash-card z-10 hover:z-50 w-full p-8 bg-gradient-to-br from-obsidian-light to-obsidian border-chart-1/20 shadow-[0_4px_20px_rgba(99,102,241,0.05)] relative group text-left cursor-pointer transition-transform hover:scale-[1.01]"
 				>
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-1/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
