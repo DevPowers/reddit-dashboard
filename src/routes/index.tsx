@@ -260,6 +260,7 @@ function Dashboard() {
 				setSelectedCategory={handleCategoryChange}
 				chartData={chartData}
 				colors={colors}
+				accordionData={accordionData}
 			/>
 
 			<SubredditDetailSection 

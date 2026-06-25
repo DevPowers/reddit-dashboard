@@ -128,7 +128,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         category: Category.GEOGRAPHY,
         subCategory: "United Kingdom",
         population: 69931528,
-        subreddits: ["london", "manchester", "unitedkingdom", "CasualUK", "UKPersonalFinance"],
+        subreddits: ["london", "manchester", "unitedkingdom", "CasualUK", "UKPersonalFinance", "AskUK", "brum", "Scotland"],
     },
     {
         category: Category.GEOGRAPHY,
@@ -140,19 +140,19 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         category: Category.GEOGRAPHY,
         subCategory: "Australia",
         population: 26600000,
-        subreddits: ["sydney", "melbourne", "australia", "AusFinance"],
+        subreddits: ["sydney", "melbourne", "australia", "AusFinance", "brisbane", "perth", "AussieCasual"],
     },
     {
         category: Category.GEOGRAPHY,
         subCategory: "Canada",
         population: 40467728,
-        subreddits: ["toronto", "vancouver", "canada", "PersonalFinanceCanada"],
+        subreddits: ["toronto", "vancouver", "canada", "PersonalFinanceCanada", "ontario", "montreal", "AskACanadian"],
     },
     {
         category: Category.GEOGRAPHY,
         subCategory: "Germany",
         population: 83644258,
-        subreddits: ["berlin", "munich", "de", "Finanzen"],
+        subreddits: ["berlin", "munich", "de", "Finanzen", "germany", "hamburg", "FragReddit"],
     },
     {
         category: Category.GEOGRAPHY,
@@ -196,7 +196,7 @@ export const TARGET_SUBREDDITS: TrackedGroup[] = [{
         category: Category.GEOGRAPHY,
         subCategory: "India",
         population: 1476625576,
-        subreddits: ["mumbai", "delhi", "india", "BollyBlindsNGossip", "IndiaInvestments", "personalfinanceindia"],
+        subreddits: ["mumbai", "delhi", "india", "BollyBlindsNGossip", "IndiaInvestments", "personalfinanceindia", "bangalore", "hyderabad", "IndiaSpeaks"],
     },
     {
         category: Category.GEOGRAPHY,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
 	ComposableMap,
 	Geographies,
@@ -28,8 +28,40 @@ const COUNTRY_MARKERS = [
 	{ name: "PH", coordinates: [121.7740, 12.8797] as [number, number] },
 ];
 
-export default function MapChart() {
-	const highlighted: string[] = [];
+interface MapChartProps {
+	countryData?: { name: string; growth: number }[];
+}
+
+// Map our DB names to world-atlas names if they differ
+const COUNTRY_NAME_MAP: Record<string, string> = {
+	"United States": "United States of America",
+};
+
+// Interpolate colors based on growth
+const getGrowthColor = (growth: number) => {
+	if (growth === undefined || growth === null) return "var(--color-obsidian-border)";
+	
+	// Negative growth: fade to danger (red)
+	if (growth < 0) {
+		const opacity = Math.max(0.1, Math.min(1, Math.abs(growth) / 10));
+		return `rgba(239, 68, 68, ${opacity})`;
+	}
+	
+	// Positive growth: fade to orangered
+	const opacity = Math.max(0.2, Math.min(1, growth / 10));
+	return `rgba(255, 69, 0, ${opacity})`;
+};
+
+export default function MapChart({ countryData = [] }: MapChartProps) {
+	// Create a quick lookup map for O(1) checks during render
+	const growthMap = useMemo(() => {
+		const map = new Map<string, number>();
+		for (const d of countryData) {
+			const mapName = COUNTRY_NAME_MAP[d.name] || d.name;
+			map.set(mapName, d.growth);
+		}
+		return map;
+	}, [countryData]);
 	const [position, setPosition] = useState({
 		coordinates: [0, 20] as [number, number],
 		zoom: 1,
@@ -64,21 +96,24 @@ export default function MapChart() {
 					<Geographies geography={geoUrl}>
 						{({ geographies }) =>
 							geographies.map((geo) => {
-								const isHighlighted = highlighted.includes(geo.properties.name);
+								const geoName = geo.properties.name;
+								const growth = growthMap.get(geoName);
+								const hasData = growth !== undefined;
+								const fillColor = hasData ? getGrowthColor(growth) : "var(--color-obsidian-border)";
+
 								return (
 									<Geography
 										key={geo.rsmKey}
 										geography={geo}
-										fill={isHighlighted ? "var(--color-orangered)" : "var(--color-obsidian-border)"}
+										fill={fillColor}
 										stroke="var(--color-obsidian)"
 										strokeWidth={0.5}
 										style={{
-											default: { outline: "none" },
+											default: { outline: "none", transition: "all 0.3s ease" },
 											hover: {
-												fill: isHighlighted ? "var(--color-orangered)" : "var(--color-chart-8)",
+												fill: hasData ? "var(--color-orangered)" : "var(--color-chart-8)",
 												outline: "none",
-												cursor: "pointer",
-												transition: "fill 0.2s ease",
+												cursor: hasData ? "pointer" : "default",
 											},
 											pressed: { outline: "none" },
 										}}

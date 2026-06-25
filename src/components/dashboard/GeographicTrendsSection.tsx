@@ -55,20 +55,23 @@ interface GeographicTrendsSectionProps {
 		lines: string[];
 	};
 	colors: string[];
+	accordionData: { groupName: string; avgGrowth: number }[];
 }
 
 export function GeographicTrendsSection({
-
 	selectedCategory,
 	setSelectedCategory,
 	chartData,
 	colors,
+	accordionData,
 }: GeographicTrendsSectionProps) {
 	return (
 		<>
 			{/* Tier 2: Dynamic Map Component */}
 			<div className="mb-8 p-4 bg-obsidian/50 border border-obsidian-border rounded-xl flex justify-center">
-				<MapChart />
+				<MapChart 
+					countryData={selectedCategory === Category.GEOGRAPHY ? accordionData.map(d => ({ name: d.groupName, growth: d.avgGrowth })) : []}
+				/>
 			</div>
 
 			{/* Tier 3: Main Stage Recharts */}
