@@ -21,7 +21,7 @@ export const Route = createRootRoute({
 			},
 			{
 				name: "description",
-				content: "Track real-time geographic and advertising user growth, engagement metrics, and ARPU velocity trends across Reddit's most important communities.",
+				content: "Track real-time geographic and advertising user growth, engagement metrics, and average community growth trends across Reddit's most important communities.",
 			},
 			{
 				property: "og:title",
@@ -29,7 +29,7 @@ export const Route = createRootRoute({
 			},
 			{
 				property: "og:description",
-				content: "Track real-time geographic and advertising user growth, engagement metrics, and ARPU velocity trends across Reddit's most important communities.",
+				content: "Track real-time geographic and advertising user growth, engagement metrics, and average community growth trends across Reddit's most important communities.",
 			},
 			{
 				name: "robots",

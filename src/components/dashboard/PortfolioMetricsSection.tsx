@@ -80,8 +80,17 @@ export function PortfolioMetricsSection({
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-orangered/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
-					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Weekly Visitor Growth (Reach-Weighted)
+					<h3 className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5">
+						Weekly Visitor Growth
+						<div className="relative flex items-center group/tooltip">
+							<Info size={14} className="text-text-muted opacity-70 hover:opacity-100 transition-opacity" />
+							<div className="absolute top-full left-0 mt-2 w-72 p-3 bg-obsidian border border-obsidian-border rounded-md shadow-2xl text-xs text-text-main opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all pointer-events-none z-20 text-left font-normal leading-relaxed">
+								<div className="font-bold mb-1">Reach-Weighted Metric</div>
+								<div className="text-text-muted">
+									This calculates the raw percentage difference between the total combined visitors of all tracked communities today versus the baseline. This weighted approach ensures that massive subreddits dictate the overall trend, preventing micro-communities from artificially skewing the average.
+								</div>
+							</div>
+						</div>
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -108,8 +117,17 @@ export function PortfolioMetricsSection({
 					<div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
 						<div className="absolute top-0 right-0 w-32 h-32 bg-chart-2/5 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
 					</div>
-					<h3 className="dash-title text-base font-semibold text-text-muted mb-1">
-						Weekly Contributor Growth (Reach-Weighted)
+					<h3 className="dash-title text-base font-semibold text-text-muted mb-1 flex items-center gap-1.5">
+						Weekly Contributor Growth
+						<div className="relative flex items-center group/tooltip">
+							<Info size={14} className="text-text-muted opacity-70 hover:opacity-100 transition-opacity" />
+							<div className="absolute top-full left-0 mt-2 w-72 p-3 bg-obsidian border border-obsidian-border rounded-md shadow-2xl text-xs text-text-main opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all pointer-events-none z-20 text-left font-normal leading-relaxed">
+								<div className="font-bold mb-1">Reach-Weighted Metric</div>
+								<div className="text-text-muted">
+									This calculates the raw percentage difference between the total combined contributions (posts/comments) across all tracked communities today versus the baseline. Like visitor growth, this metric is heavily weighted by the activity volume of large subreddits.
+								</div>
+							</div>
+						</div>
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
@@ -188,7 +206,7 @@ export function PortfolioMetricsSection({
 					>
 						<div className="flex items-center justify-between p-6 border-b border-obsidian-border bg-obsidian-light">
 							<h3 className="text-xl font-bold text-white">
-								{openModal === "visitors" ? "Weekly Visitor Trend" : openModal === "contributions" ? "Weekly Contributor Trend" : "ARPU Velocity Trend"}
+								{openModal === "visitors" ? "Weekly Visitor Trend" : openModal === "contributions" ? "Weekly Contributor Trend" : "Average Community Growth Trend"}
 							</h3>
 							<button 
 								onClick={() => setOpenModal(null)}
