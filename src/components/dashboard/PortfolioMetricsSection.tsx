@@ -63,7 +63,7 @@ export function PortfolioMetricsSection({
 			"Visitor Percent Growth": Number(row.visitorGrowthPercent.toFixed(2)),
 			"Net New Contributions": row.netNewWeeklyContributions,
 			"Contribution Percent Growth": Number(row.contributionGrowthPercent.toFixed(2)),
-			"Velocity Index": Number(row.averageCommunityGrowth.toFixed(2)),
+			"Avg Community Growth": Number(row.averageCommunityGrowth.toFixed(2)),
 		}));
 	}, [platformHistory]);
 
@@ -146,7 +146,7 @@ export function PortfolioMetricsSection({
 				</button>
 			</div>
 
-			{/* Velocity Card (Full Width) */}
+			{/* Average Community Growth Card (Full Width) */}
 			<div className="mb-8">
 				<button
 					type="button"
@@ -276,7 +276,7 @@ export function PortfolioMetricsSection({
 											<Line
 												yAxisId="left"
 												type="monotone"
-												dataKey="Velocity Index"
+												dataKey="Avg Community Growth"
 												stroke="var(--color-chart-1)"
 												strokeWidth={3}
 												dot={false}

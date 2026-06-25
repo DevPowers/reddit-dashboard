@@ -36,7 +36,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 			date: format(new Date(row.recordedAt), "MMM dd"),
 			"Net New Visitors": row.netNewWeeklyVisitors,
 			"Net New Contributions": row.netNewWeeklyContributions,
-			"Velocity Index": Number(row.averageCommunityGrowth.toFixed(2)),
+			"Avg Community Growth": Number(row.averageCommunityGrowth.toFixed(2)),
 		}));
 	}, [data]);
 
@@ -83,7 +83,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 							tickLine={false}
 						/>
 						
-						{/* Right Y-Axis for Velocity Index */}
+						{/* Right Y-Axis for Avg Community Growth */}
 						<YAxis
 							yAxisId="right"
 							orientation="right"
@@ -109,7 +109,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 								marginBottom: "4px",
 							}}
 							formatter={(value: any, name: any) => {
-								if (name === "Velocity Index") {
+								if (name === "Avg Community Growth") {
 									return [value > 0 ? `+${value}` : value, name];
 								}
 								if (name === "Net New Visitors" || name === "Net New Contributions") {
@@ -144,7 +144,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 						<Line
 							yAxisId="right"
 							type="monotone"
-							dataKey="Velocity Index"
+							dataKey="Avg Community Growth"
 							stroke="#FF4500"
 							strokeWidth={3}
 							dot={false}
