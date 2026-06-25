@@ -148,7 +148,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const overallNetNewContributions = growthNumeratorLatestContributions - growthDenominatorBaselineContributions;
 
 	// Dynamic normalization instead of magic /100000 constant
-	const velocityIndexScore = normalizeVelocityScore(
+	const averageCommunityGrowth = normalizeVelocityScore(
 		totalWeightedVelocity,
 		velocityContributorCount,
 	);
@@ -173,7 +173,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 				totalWeeklyContributions: totalLatestContributions,
 				contributionGrowthPercent: overallContributionGrowthPercent,
 				netNewWeeklyContributions: overallNetNewContributions,
-				velocityIndexScore: velocityIndexScore,
+				averageCommunityGrowth: averageCommunityGrowth,
 			})
 			.where(eq(platformHistoricalMetrics.id, existingToday[0].id))
 			.returning();
@@ -189,7 +189,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 			totalWeeklyContributions: totalLatestContributions,
 			contributionGrowthPercent: overallContributionGrowthPercent,
 			netNewWeeklyContributions: overallNetNewContributions,
-			velocityIndexScore: velocityIndexScore,
+			averageCommunityGrowth: averageCommunityGrowth,
 		})
 		.returning();
 

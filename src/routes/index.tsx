@@ -117,7 +117,7 @@ function Dashboard() {
 				netNewVisitors: 0,
 				contributionGrowthPercent: 0,
 				netNewContributions: 0,
-				weightedVelocity: 0,
+				averageCommunityGrowth: 0,
 			};
 		}
 
@@ -126,7 +126,7 @@ function Dashboard() {
 			netNewVisitors: latest.netNewWeeklyVisitors,
 			contributionGrowthPercent: latest.contributionGrowthPercent,
 			netNewContributions: latest.netNewWeeklyContributions,
-			weightedVelocity: latest.velocityIndexScore,
+			averageCommunityGrowth: latest.averageCommunityGrowth,
 		};
 	}, [historyToUse]);
 

@@ -31,7 +31,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewVisitors: 0,
 					contributionGrowthPercent: 0,
 					netNewContributions: 0,
-					weightedVelocity: 0,
+					averageCommunityGrowth: 0,
 				}}
 				platformHistory={[]}
 			/>
@@ -55,7 +55,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewVisitors: 0,
 					contributionGrowthPercent: 0,
 					netNewContributions: 0,
-					weightedVelocity: 0,
+					averageCommunityGrowth: 0,
 				}}
 				platformHistory={[
 					{
@@ -67,7 +67,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 						totalWeeklyContributions: 10000,
 						contributionGrowthPercent: 0,
 						netNewWeeklyContributions: 0,
-						velocityIndexScore: 0,
+						averageCommunityGrowth: 0,
 					},
 				]}
 			/>
@@ -87,7 +87,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 					netNewVisitors: 10000,
 					contributionGrowthPercent: 10,
 					netNewContributions: 1000,
-					weightedVelocity: 2.5,
+					averageCommunityGrowth: 2.5,
 				}}
 				platformHistory={[
 					{
@@ -99,7 +99,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 						totalWeeklyContributions: 1000,
 						contributionGrowthPercent: 0,
 						netNewWeeklyContributions: 0,
-						velocityIndexScore: 0,
+						averageCommunityGrowth: 0,
 					},
 					{
 						id: 2,
@@ -110,7 +110,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 						totalWeeklyContributions: 1100,
 						contributionGrowthPercent: 10,
 						netNewWeeklyContributions: 100,
-						velocityIndexScore: 2.5,
+						averageCommunityGrowth: 2.5,
 					},
 				]}
 			/>

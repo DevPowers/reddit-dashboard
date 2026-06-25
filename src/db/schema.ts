@@ -169,6 +169,6 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	contributionGrowthPercent: real("contribution_growth_percent").notNull().default(0),
 	netNewWeeklyContributions: integer("net_new_weekly_contributions").notNull().default(0),
 	// ARPU Velocity
-	velocityIndexScore: real("velocity_index_score").notNull(),
+	averageCommunityGrowth: real("average_community_growth").notNull(),
 }).enableRLS();
 

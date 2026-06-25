@@ -22,7 +22,7 @@ interface HistoricalMetric {
 	totalWeeklyContributions: number;
 	contributionGrowthPercent: number;
 	netNewWeeklyContributions: number;
-	velocityIndexScore: number;
+	averageCommunityGrowth: number;
 }
 
 interface PortfolioMetricsSectionProps {
@@ -31,7 +31,7 @@ interface PortfolioMetricsSectionProps {
 		netNewVisitors: number;
 		contributionGrowthPercent: number;
 		netNewContributions: number;
-		weightedVelocity: number;
+		averageCommunityGrowth: number;
 	};
 
 	platformHistory?: HistoricalMetric[];
@@ -63,7 +63,7 @@ export function PortfolioMetricsSection({
 			"Visitor Percent Growth": Number(row.visitorGrowthPercent.toFixed(2)),
 			"Net New Contributions": row.netNewWeeklyContributions,
 			"Contribution Percent Growth": Number(row.contributionGrowthPercent.toFixed(2)),
-			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
+			"Velocity Index": Number(row.averageCommunityGrowth.toFixed(2)),
 		}));
 	}, [platformHistory]);
 
@@ -161,10 +161,10 @@ export function PortfolioMetricsSection({
 					</h3>
 					<div className="flex items-end gap-3 mt-3">
 						<span
-							className={`text-5xl font-extrabold tracking-tight transition-colors duration-300 ${getVelocityColorClass(portfolioMetrics.weightedVelocity)}`}
+							className={`text-5xl font-extrabold tracking-tight transition-colors duration-300 ${getVelocityColorClass(portfolioMetrics.averageCommunityGrowth)}`}
 						>
-							{portfolioMetrics.weightedVelocity > 0 ? "+" : ""}
-							{portfolioMetrics.weightedVelocity.toFixed(1)}
+							{portfolioMetrics.averageCommunityGrowth > 0 ? "+" : ""}
+							{portfolioMetrics.averageCommunityGrowth.toFixed(1)}
 						</span>
 					</div>
 					<div className="mt-3 text-text-muted text-sm flex items-center gap-2">

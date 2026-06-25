@@ -43,7 +43,7 @@ describe("Macro Metrics Math Scenarios", () => {
 		expect(result.totalWeeklyContributions).toBe(0);
 		expect(result.contributionGrowthPercent).toBe(0);
 		expect(result.netNewWeeklyContributions).toBe(0);
-		expect(result.velocityIndexScore).toBe(0);
+		expect(result.averageCommunityGrowth).toBe(0);
 	});
 
 	it("Scenario B: Single Data Point - Should protect against mathematical dilution", async () => {
@@ -77,7 +77,7 @@ describe("Macro Metrics Math Scenarios", () => {
 		expect(result.netNewWeeklyVisitors).toBe(0);
 		expect(result.contributionGrowthPercent).toBe(0);
 		expect(result.netNewWeeklyContributions).toBe(0);
-		expect(result.velocityIndexScore).toBe(0);
+		expect(result.averageCommunityGrowth).toBe(0);
 	});
 
 	it("Scenario C: Multiple Data Points + Single Point - Should accurately calculate actual aged growth", async () => {
@@ -142,6 +142,6 @@ describe("Macro Metrics Math Scenarios", () => {
 		expect(result.netNewWeeklyContributions).toBe(10);
 
 		// Velocity should be positive because growth was positive
-		expect(result.velocityIndexScore).toBeGreaterThan(0);
+		expect(result.averageCommunityGrowth).toBeGreaterThan(0);
 	});
 });

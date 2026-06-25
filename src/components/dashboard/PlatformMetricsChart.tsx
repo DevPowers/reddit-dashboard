@@ -18,7 +18,7 @@ interface HistoricalMetric {
 	netNewWeeklyVisitors: number;
 	totalWeeklyContributions: number;
 	netNewWeeklyContributions: number;
-	velocityIndexScore: number;
+	averageCommunityGrowth: number;
 }
 
 interface PlatformMetricsChartProps {
@@ -36,7 +36,7 @@ export function PlatformMetricsChart({ data }: PlatformMetricsChartProps) {
 			date: format(new Date(row.recordedAt), "MMM dd"),
 			"Net New Visitors": row.netNewWeeklyVisitors,
 			"Net New Contributions": row.netNewWeeklyContributions,
-			"Velocity Index": Number(row.velocityIndexScore.toFixed(2)),
+			"Velocity Index": Number(row.averageCommunityGrowth.toFixed(2)),
 		}));
 	}, [data]);
 

@@ -104,7 +104,7 @@ export function generateMockPlatformHistory() {
 			totalWeeklyContributions: Math.floor(reach * 0.05),
 			contributionGrowthPercent: i * 0.05,
 			netNewWeeklyContributions: Math.floor((reach - 1200000 * 7) * 0.05),
-			velocityIndexScore: velocity,
+			averageCommunityGrowth: velocity,
 		});
 	}
 
