@@ -214,29 +214,54 @@ export const runScrapeCycle = async () => {
 		const cutoffHours = (scrapeIntervalDays * 24) - 12;
 		const cutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
 
-		const lastScrapesResult = await db
-			.select({
-				subredditId: metricsHistory.subredditId,
-				lastScraped: sql<string>`max(${metricsHistory.recordedAt})`,
-			})
-			.from(metricsHistory)
-			.groupBy(metricsHistory.subredditId);
+		const successCutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
+		const failureRetryCutoff = new Date(Date.now() - (24 * 60 * 60 * 1000)); // 24 hour backoff
 
-		const lastScrapedMap = new Map<number, number>();
-		for (const row of lastScrapesResult) {
-			lastScrapedMap.set(row.subredditId, new Date(row.lastScraped).getTime());
+		const lastSuccessResult = await db
+			.select({
+				subredditId: cronSubredditLogs.subredditId,
+				lastScraped: sql<string>`max(${cronSubredditLogs.ranAt})`,
+			})
+			.from(cronSubredditLogs)
+			.where(eq(cronSubredditLogs.status, "success"))
+			.groupBy(cronSubredditLogs.subredditId);
+
+		const lastAttemptResult = await db
+			.select({
+				subredditId: cronSubredditLogs.subredditId,
+				lastAttempt: sql<string>`max(${cronSubredditLogs.ranAt})`,
+			})
+			.from(cronSubredditLogs)
+			.groupBy(cronSubredditLogs.subredditId);
+
+		const lastSuccessMap = new Map<number, number>();
+		for (const row of lastSuccessResult) {
+			lastSuccessMap.set(row.subredditId, new Date(row.lastScraped).getTime());
+		}
+
+		const lastAttemptMap = new Map<number, number>();
+		for (const row of lastAttemptResult) {
+			lastAttemptMap.set(row.subredditId, new Date(row.lastAttempt).getTime());
 		}
 
 		// Filter out subreddits that have been scraped recently
 		const subs = allSubs.filter((sub) => {
-			const lastScrapedTime = lastScrapedMap.get(sub.id) || 0;
-			return lastScrapedTime < cutoff.getTime();
+			const lastSuccessTime = lastSuccessMap.get(sub.id) || 0;
+			const lastAttemptTime = lastAttemptMap.get(sub.id) || 0;
+			
+			// If it succeeded within the interval, don't scrape
+			if (lastSuccessTime >= successCutoff.getTime()) return false;
+			
+			// If it failed, but we tried within the last 24 hours, don't scrape (backoff)
+			if (lastAttemptTime >= failureRetryCutoff.getTime()) return false;
+			
+			return true;
 		});
 
 		// Sort subreddits so the ones that have gone the longest without a scrape are targeted first
 		subs.sort((a, b) => {
-			const timeA = lastScrapedMap.get(a.id) || 0;
-			const timeB = lastScrapedMap.get(b.id) || 0;
+			const timeA = lastAttemptMap.get(a.id) || 0;
+			const timeB = lastAttemptMap.get(b.id) || 0;
 			return timeA - timeB;
 		});
 
@@ -397,10 +422,14 @@ export const runScrapeCycle = async () => {
 						status: "failed",
 						errorMessage: "Anti-Bot Detection Placeholder",
 						httpCode: response.status || null,
-						usedPremium: usePremium,
+						usedPremium: usePremium || !!useZenRows,
+						provider: useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard"),
 						durationMs: Date.now() - fetchStartMs,
 						ranAt: sql`${getEasternTimeISO()}`,
 					});
+					await db.update(subreddits)
+						.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
+						.where(eq(subreddits.id, sub.id));
 					continue;
 				}
 
@@ -417,10 +446,14 @@ export const runScrapeCycle = async () => {
 						status: "failed",
 						errorMessage: "DOM parse failed or zero metrics",
 						httpCode: response.status || null,
-						usedPremium: usePremium,
+						usedPremium: usePremium || !!useZenRows,
+						provider: useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard"),
 						durationMs: Date.now() - fetchStartMs,
 						ranAt: sql`${getEasternTimeISO()}`,
 					});
+					await db.update(subreddits)
+						.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
+						.where(eq(subreddits.id, sub.id));
 					continue;
 				}
 
