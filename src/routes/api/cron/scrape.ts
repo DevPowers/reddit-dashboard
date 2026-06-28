@@ -90,7 +90,17 @@ export const runScrapeCycle = async () => {
 		if (!activeKeyRow || isLockedOut(activeKeyRow)) {
 			const availableKeys = keysInDb.filter(k => !isLockedOut(k));
 			if (availableKeys.length === 0) {
-				throw new Error("All ScraperAPI keys have been exhausted/rate-limited within the last 24 hours.");
+				const errMsg = "All ScraperAPI keys have been exhausted/rate-limited within the last 24 hours.";
+				logger.error("Cron", errMsg);
+				await db
+					.update(cronLogs)
+					.set({
+						status: "failed",
+						errorMessage: errMsg,
+						durationMs: Date.now() - startTime,
+					})
+					.where(eq(cronLogs.id, log.id));
+				return { message: "Scraping cycle aborted: " + errMsg, results: [] };
 			}
 			
 			await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
