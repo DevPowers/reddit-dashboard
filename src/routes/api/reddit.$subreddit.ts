@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/reddit/$subreddit")({
 
 					const targetUrl = `https://www.reddit.com/r/${subreddit}/`;
 					// ScraperAPI requires the URL to be passed as a query parameter
-					const scraperUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(targetUrl)}&render=true`;
+					const scraperUrl = `https://api.scraperapi.com/?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
 
 					const response = await fetch(scraperUrl);
 

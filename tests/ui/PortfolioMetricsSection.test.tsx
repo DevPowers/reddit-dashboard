@@ -133,7 +133,7 @@ describe("PortfolioMetricsSection UI Math Edge Cases", () => {
 			closeButton.click();
 		});
 
-		const dauButton = screen.getByText("Weekly Visitor Growth (Reach-Weighted)").closest('button');
+		const dauButton = screen.getByText("Weekly Visitor Growth").closest('button');
 		act(() => {
 			dauButton?.click();
 		});

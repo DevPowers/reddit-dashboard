@@ -298,7 +298,7 @@ export const runScrapeCycle = async () => {
 			for (const sub of batch) {
 				const fetchStartMs = Date.now();
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
 				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 				const useZenRows = sub.consecutiveFailures >= 2 && process.env.ZENROWS_API_KEY;
 
@@ -307,7 +307,7 @@ export const runScrapeCycle = async () => {
 				}
 
 				if (useZenRows) {
-					scraperUrl = `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&js_render=true&premium_proxy=true`;
+					scraperUrl = `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&js_render=true&premium_proxy=true&wait_for=shreddit-subreddit-header&original_status=true`;
 				} else if (usePremium) {
 					scraperUrl += "&premium=true";
 				}
@@ -354,7 +354,7 @@ export const runScrapeCycle = async () => {
 							currentKeyRowId = fallbackKeyRow.id;
 							currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
 							
-							scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+							scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
 							const fallbackUsePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 							if (fallbackUsePremium) {
 								scraperUrl += "&premium=true";

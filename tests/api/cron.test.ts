@@ -4,7 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import * as schema from '../../src/db/schema';
-import { subreddits, metricsHistory, cronSubredditLogs } from '../../src/db/schema';
+import { subreddits, metricsHistory, cronSubredditLogs, cronLogs } from '../../src/db/schema';
 import { eq } from 'drizzle-orm';
 
 // We need to mock the exported `db` from `src/db/index` to point to our in-memory PGLite instance.
@@ -87,8 +87,9 @@ describe('Cron Job Idempotency & API Integration', () => {
 		});
 		await scrapeHandler({ request: syncRequest });
 
-		// 2. Clear out the metrics history so we have a fresh slate
+		// 2. Clear out the metrics history and logs so we have a fresh slate
 		await mockDb.delete(metricsHistory);
+		await mockDb.delete(cronSubredditLogs);
 
 		// 3. Find the ID for r/mexico
 		const allSubs = await mockDb.select().from(subreddits);
@@ -103,6 +104,14 @@ describe('Cron Job Idempotency & API Integration', () => {
 			weeklyContributions: 10,
 			usedPremium: false,
 			recordedAt: twoHoursAgo
+		});
+		const [insertedCron] = await mockDb.insert(cronLogs).values({ status: 'success', durationMs: 100, ranAt: twoHoursAgo }).returning();
+		await mockDb.insert(cronSubredditLogs).values({
+			cronLogId: insertedCron.id,
+			subredditId: mexicoSub.id,
+			status: 'success',
+			durationMs: 100,
+			ranAt: twoHoursAgo
 		});
 
 		// 5. Trigger the cron job again
@@ -146,6 +155,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 		// Drizzle ORM doesn't easily let us update recordedAt for all if there are timezone quirks,
 		// but we can manually wipe and insert them via raw sql if needed, or simply let drizzle update them all.
 		await client.query("UPDATE metrics_history SET recorded_at = $1", [oneDayAgo]);
+		await client.query("UPDATE cron_subreddit_logs SET ran_at = $1", [oneDayAgo]);
 
 		// Reset our mock fetch counter
 		vi.mocked(global.fetch).mockClear();
@@ -165,6 +175,7 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 		// Clean history to ensure scraping happens
 		await mockDb.delete(metricsHistory);
+		await mockDb.delete(cronSubredditLogs);
 		await mockDb.delete(schema.scraperKeys);
 
 		let fetchCallCount = 0;
@@ -197,6 +208,10 @@ describe('Cron Job Idempotency & API Integration', () => {
 		vi.stubEnv('CRON_SECRET', 'test_secret');
 		vi.stubEnv('SCRAPE_INTERVAL_DAYS', '0'); // Force scrape every run
 
+		// Clean out logs to make sure we don't have overlapping data from other tests
+		await mockDb.delete(cronSubredditLogs);
+		await mockDb.delete(metricsHistory);
+
 		// We will use the 'mexico' subreddit which is naturally seeded by the script
 		// Run 1: Fails
 		let mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500, statusText: "Timeout" });
@@ -207,6 +222,10 @@ describe('Cron Job Idempotency & API Integration', () => {
 
 		let updatedSub = await mockDb.select().from(subreddits).where(eq(subreddits.name, 'mexico'));
 		expect(updatedSub[0].consecutiveFailures).toBe(1);
+
+		// Bypass the 24 hour retry backoff for testing by resetting the log's ranAt time
+		const twoDaysAgo = new Date(Date.now() - (48 * 60 * 60 * 1000));
+		await client.query("UPDATE cron_subreddit_logs SET ran_at = $1", [twoDaysAgo]);
 
 		// Run 2: The script should now append premium=true, and we mock success!
 		mockFetch = vi.fn().mockImplementation((url) => {

@@ -181,8 +181,8 @@
           "notNull": true,
           "default": 0
         },
-        "velocity_index_score": {
-          "name": "velocity_index_score",
+        "average_community_growth": {
+          "name": "average_community_growth",
           "type": "real",
           "primaryKey": false,
           "notNull": true
