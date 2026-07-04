@@ -300,48 +300,37 @@ export const runScrapeCycle = async () => {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
 				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
-				const useZenRows = sub.consecutiveFailures >= 2 && process.env.ZENROWS_API_KEY;
 
-				if (sub.consecutiveFailures >= 2 && !process.env.ZENROWS_API_KEY) {
-					logger.warn("Cron", `[Attempt ${sub.consecutiveFailures + 1}] r/${sub.name} has 2+ consecutive failures, but ZENROWS_API_KEY is missing. Falling back to ScraperAPI Premium.`);
-				}
-
-				if (useZenRows) {
-					scraperUrl = `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&js_render=true&premium_proxy=true&wait_for=shreddit-subreddit-header&original_status=true`;
-				} else if (usePremium) {
+				if (usePremium) {
 					scraperUrl += "&premium=true";
 				}
 
 				const attemptNum = sub.consecutiveFailures + 1;
-				const providerNameStr = useZenRows ? "ZenRows" : (usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard");
+				const providerNameStr = usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
 				logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape r/${sub.name} using ${providerNameStr} (Key Index ${activeKeyRow!.keyIndex})...`);
 
-				if (!useZenRows) {
-					await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-				}
+				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 				
 				let response = await fetchWithTimeout(scraperUrl, 60000);
 
 				if (!response.ok) {
 					logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
 					
-					if (!useZenRows) {
-						// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
-						if (response.status === 429 || response.status === 403) {
-							await db.update(scraperKeys)
-								.set({ lastErrorAt: new Date(), lastStatus: "failed" })
-								.where(eq(scraperKeys.id, currentKeyRowId));
-						} else {
-							// For 408 Timeouts or 500s, just log the failure but keep the key alive in the pool
-							await db.update(scraperKeys)
-								.set({ lastStatus: "failed" })
-								.where(eq(scraperKeys.id, currentKeyRowId));
-						}
+					// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
+					if (response.status === 429 || response.status === 403) {
+						await db.update(scraperKeys)
+							.set({ lastErrorAt: new Date(), lastStatus: "failed" })
+							.where(eq(scraperKeys.id, currentKeyRowId));
+					} else {
+						// For 408 Timeouts or 500s, just log the failure but keep the key alive in the pool
+						await db.update(scraperKeys)
+							.set({ lastStatus: "failed" })
+							.where(eq(scraperKeys.id, currentKeyRowId));
 					}
 						
-					// Attempt Rotation ONLY if we hit a quota/rate limit error AND we aren't using ZenRows
+					// Attempt Rotation ONLY if we hit a quota/rate limit error
 					let fallbackUsed = false;
-					if (!useZenRows && (response.status === 429 || response.status === 403)) {
+					if (response.status === 429 || response.status === 403) {
 						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
 						const fallbackKeyRow = allKeys.find(k => k.id !== currentKeyRowId && (!k.lastErrorAt || new Date(k.lastErrorAt) <= new Date(Date.now() - 24 * 60 * 60 * 1000)));
 						
@@ -381,7 +370,7 @@ export const runScrapeCycle = async () => {
 							error: response.statusText,
 						});
 						
-						const providerStr = useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard");
+						const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
 						
 						await db.insert(cronSubredditLogs).values({
 							cronLogId: log.id,
@@ -389,14 +378,14 @@ export const runScrapeCycle = async () => {
 							status: "failed",
 							errorMessage: response.statusText || null,
 							httpCode: response.status || null,
-							usedPremium: usePremium || !!useZenRows,
+							usedPremium: usePremium,
 							provider: providerStr,
 							durationMs: Date.now() - fetchStartMs,
 							ranAt: sql`${getEasternTimeISO()}`,
 						});
 						
-						// Increment consecutiveFailures if it's not a quota/rate limit error (or if using ZenRows)
-						if (useZenRows || (response.status !== 403 && response.status !== 429)) {
+						// Increment consecutiveFailures if it's not a quota/rate limit error
+						if (response.status !== 403 && response.status !== 429) {
 							await db.update(subreddits)
 								.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
 								.where(eq(subreddits.id, sub.id));
@@ -405,9 +394,7 @@ export const runScrapeCycle = async () => {
 					}
 				}
 
-				if (!useZenRows) {
-					await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
-				}
+				await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
 				const html = await response.text();
 				const $ = cheerio.load(html);
 
@@ -432,8 +419,8 @@ export const runScrapeCycle = async () => {
 						status: "failed",
 						errorMessage: "Anti-Bot Detection Placeholder",
 						httpCode: response.status || null,
-						usedPremium: usePremium || !!useZenRows,
-						provider: useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard"),
+						usedPremium: usePremium,
+						provider: usePremium ? "scraperapi_premium" : "scraperapi_standard",
 						durationMs: Date.now() - fetchStartMs,
 						ranAt: sql`${getEasternTimeISO()}`,
 					});
@@ -456,8 +443,8 @@ export const runScrapeCycle = async () => {
 						status: "failed",
 						errorMessage: "DOM parse failed or zero metrics",
 						httpCode: response.status || null,
-						usedPremium: usePremium || !!useZenRows,
-						provider: useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard"),
+						usedPremium: usePremium,
+						provider: usePremium ? "scraperapi_premium" : "scraperapi_standard",
 						durationMs: Date.now() - fetchStartMs,
 						ranAt: sql`${getEasternTimeISO()}`,
 					});
@@ -474,7 +461,7 @@ export const runScrapeCycle = async () => {
 					recordedAt: sql`${getEasternTimeISO()}`,
 				});
 
-				const providerStr = useZenRows ? "zenrows" : (usePremium ? "scraperapi_premium" : "scraperapi_standard");
+				const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
 
 				await db.insert(cronSubredditLogs).values({
 					cronLogId: log.id,
@@ -482,7 +469,7 @@ export const runScrapeCycle = async () => {
 					status: "success",
 					errorMessage: null,
 					httpCode: response.status || null,
-					usedPremium: usePremium || !!useZenRows,
+					usedPremium: usePremium,
 					provider: providerStr,
 					durationMs: Date.now() - fetchStartMs,
 					ranAt: sql`${getEasternTimeISO()}`,

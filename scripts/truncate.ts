@@ -1,3 +1,5 @@
+// Utility script to truncate database tables for a fresh state
+
 import postgres from 'postgres';
 import * as dotenv from 'dotenv';
 dotenv.config();

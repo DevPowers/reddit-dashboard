@@ -1,3 +1,5 @@
+// Utility script to count total rows or metrics in the database
+
 import { TARGET_SUBREDDITS, PREMIUM_PROXIED_SUBS } from "./src/data/subreddits";
 let count = 0;
 TARGET_SUBREDDITS.forEach(g => count += g.subreddits.length);

@@ -1,3 +1,5 @@
+// Script to analyze scraper failures that occurred while using premium proxies
+
 import { db } from "./src/db/index.server";
 import { cronSubredditLogs } from "./src/db/schema";
 import { eq, and } from "drizzle-orm";

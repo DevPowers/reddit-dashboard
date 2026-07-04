@@ -1,3 +1,5 @@
+// Script to rename references inside the .sql migration files
+
 import { db } from "./src/db/index.server";
 import { sql } from "drizzle-orm";
 

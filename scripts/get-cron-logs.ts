@@ -1,3 +1,5 @@
+// Script to fetch and print recent cron execution logs
+
 import { db } from "./src/db/index.server";
 import { cronLogs } from "./src/db/schema";
 import { desc } from "drizzle-orm";

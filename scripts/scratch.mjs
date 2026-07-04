@@ -1,3 +1,5 @@
+// General scratchpad script for temporary ESM Node.js tests
+
 import { db } from "./src/db/index.js";
 import { subreddits, trackingGroups, subredditGroups } from "./src/db/schema.js";
 import { eq } from "drizzle-orm";

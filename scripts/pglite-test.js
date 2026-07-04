@@ -1,3 +1,5 @@
+// Test script for the in-memory PGLite database environment
+
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';

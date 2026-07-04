@@ -1,3 +1,5 @@
+// Script to prune or delete old/stale data from the database
+
 import { db } from "./src/db/index.server";
 import { subredditGroups, subreddits } from "./src/db/schema";
 import { TARGET_SUBREDDITS } from "./src/data/subreddits";

@@ -1,3 +1,5 @@
+// Script to rename columns or tables inside the compiled database or metadata
+
 const fs = require('fs');
 const files = [
   'src/components/dashboard/PlatformMetricsChart.tsx',

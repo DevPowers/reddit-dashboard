@@ -1,3 +1,5 @@
+// Diagnostic script to check the status and contents of the database
+
 import { db } from "./src/db/index.server";
 import { metricsHistory, platformHistoricalMetrics } from "./src/db/schema";
 import { sql } from "drizzle-orm";

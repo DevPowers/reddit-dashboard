@@ -1,3 +1,5 @@
+// Script to check for cron or scraper errors in the logs
+
 import { db } from "./src/db/index.server";
 import { cronSubredditLogs, subreddits } from "./src/db/schema";
 import { eq, desc } from "drizzle-orm";

@@ -1,3 +1,5 @@
+// Script to strip or modify ARPU data calculations
+
 const fs = require('fs');
 const glob = require('glob');
 

@@ -1,3 +1,5 @@
+// Script to check the usage and rate limits of active API keys
+
 import { db } from "./src/db/index.server";
 import { scraperKeys } from "./src/db/schema";
 

@@ -1,3 +1,5 @@
+// General scratchpad script for temporary TypeScript tests
+
 import { db } from "./src/db/index.server";
 import { sql } from "drizzle-orm";
 async function run() {

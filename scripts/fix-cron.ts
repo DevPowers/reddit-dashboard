@@ -1,3 +1,5 @@
+// Utility script to repair or migrate cron log tables
+
 import { db } from "./src/db/index.server";
 import { cronLogs } from "./src/db/schema";
 import { eq } from "drizzle-orm";

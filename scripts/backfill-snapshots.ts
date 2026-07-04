@@ -1,3 +1,5 @@
+// Script to backfill missing daily snapshots
+
 import { db } from "./src/db/index.server";
 import { platformHistoricalMetrics } from "./src/db/schema";
 import { calculateAndSaveMacroMetrics } from "./src/functions/macro";

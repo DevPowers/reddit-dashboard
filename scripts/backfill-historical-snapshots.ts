@@ -1,3 +1,5 @@
+// Script to backfill historical metrics snapshots into the database
+
 import { db } from "./src/db/index.server";
 import { metricsHistory, platformHistoricalMetrics, subreddits, subredditGroups, trackingGroups } from "./src/db/schema";
 import { eq, notInArray, lte } from "drizzle-orm";
