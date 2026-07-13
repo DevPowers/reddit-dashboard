@@ -65,6 +65,7 @@ export const runScrapeCycle = async () => {
 	logger.info("Cron", "Starting scrape cycle...");
 
 	try {
+		const exhaustedKeyIds = new Set<number>();
 		// --- 0. Key Rotation Logic ---
 		let keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
 		
