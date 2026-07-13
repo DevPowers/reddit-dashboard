@@ -234,10 +234,10 @@ export const runScrapeCycle = async () => {
 			return true;
 		});
 
-		// Sort subreddits so the ones that have gone the longest without a scrape are targeted first
+		// Sort subreddits so the ones that have gone the longest without a successful scrape are targeted first
 		subs.sort((a, b) => {
-			const timeA = lastAttemptMap.get(a.id) || 0;
-			const timeB = lastAttemptMap.get(b.id) || 0;
+			const timeA = lastSuccessMap.get(a.id) || 0;
+			const timeB = lastSuccessMap.get(b.id) || 0;
 			return timeA - timeB;
 		});
 
