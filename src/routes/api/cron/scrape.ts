@@ -280,7 +280,6 @@ export const runScrapeCycle = async () => {
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
 				let response;
 				let attemptNum = sub.consecutiveFailures + 1;
-				let fetchStartMs = Date.now();
 				let usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 
 				while (true) {
