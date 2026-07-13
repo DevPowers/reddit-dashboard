@@ -49,6 +49,28 @@ export const getPlatformHistory = createServerFn({ method: "GET" }).handler(
 			.select()
 			.from(platformHistoricalMetrics)
 			.orderBy(asc(platformHistoricalMetrics.recordedAt));
+
+		const todayStart = new Date();
+		todayStart.setUTCHours(0, 0, 0, 0);
+
+		let hasToday = false;
+		for (const row of history) {
+			if (new Date(row.recordedAt) >= todayStart) {
+				hasToday = true;
+				break;
+			}
+		}
+
+		if (!hasToday) {
+			const { calculateAndSaveMacroMetrics } = await import("./macro");
+			try {
+				const newRecord = await calculateAndSaveMacroMetrics();
+				history.push(newRecord);
+			} catch (e) {
+				console.error("Failed to calculate fallback macro metrics via UI trigger:", e);
+			}
+		}
+
 		return history;
 	},
 );
