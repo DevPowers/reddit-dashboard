@@ -80,31 +80,11 @@ export const runScrapeCycle = async () => {
 			keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
 		}
 
-		const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-		const isLockedOut = (keyRow: typeof keysInDb[0]) => {
-			return keyRow.lastErrorAt && new Date(keyRow.lastErrorAt) > twentyFourHoursAgo;
-		};
-
 		let activeKeyRow = keysInDb.find(k => k.isActive);
 
-		if (!activeKeyRow || isLockedOut(activeKeyRow)) {
-			const availableKeys = keysInDb.filter(k => !isLockedOut(k));
-			if (availableKeys.length === 0) {
-				const errMsg = "All ScraperAPI keys have been exhausted/rate-limited within the last 24 hours.";
-				logger.error("Cron", errMsg);
-				await db
-					.update(cronLogs)
-					.set({
-						status: "failed",
-						errorMessage: errMsg,
-						durationMs: Date.now() - startTime,
-					})
-					.where(eq(cronLogs.id, log.id));
-				return { message: "Scraping cycle aborted: " + errMsg, results: [] };
-			}
-			
+		if (!activeKeyRow) {
 			await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
-			activeKeyRow = availableKeys[0];
+			activeKeyRow = keysInDb[0];
 			await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, activeKeyRow.id));
 			logger.info("Cron", `Rotated active key to index ${activeKeyRow.keyIndex}`);
 		}
@@ -332,7 +312,8 @@ export const runScrapeCycle = async () => {
 					let fallbackUsed = false;
 					if (response.status === 429 || response.status === 403) {
 						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
-						const fallbackKeyRow = allKeys.find(k => k.id !== currentKeyRowId && (!k.lastErrorAt || new Date(k.lastErrorAt) <= new Date(Date.now() - 24 * 60 * 60 * 1000)));
+						const currentIndex = allKeys.findIndex(k => k.id === currentKeyRowId);
+						const fallbackKeyRow = allKeys.length > 1 ? allKeys[(currentIndex + 1) % allKeys.length] : null;
 						
 						if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
 							logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
