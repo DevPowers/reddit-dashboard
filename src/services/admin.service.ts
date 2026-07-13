@@ -16,11 +16,11 @@ export const getAdminStats = async () => {
 	const totalCrons = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(cronLogs);
-	const lastCron = await db
+	const recentCrons = await db
 		.select()
 		.from(cronLogs)
 		.orderBy(desc(cronLogs.ranAt))
-		.limit(1);
+		.limit(3);
 
 	const avgDurationResult = await db
 		.select({ avg: sql<number>`avg(${cronLogs.durationMs})::int` })
@@ -82,7 +82,8 @@ export const getAdminStats = async () => {
 	return {
 		cronStats: {
 			totalRuns: totalCrons[0]?.count || 0,
-			lastRun: lastCron[0] || null,
+			lastRun: recentCrons[0] || null,
+			recentRuns: recentCrons,
 			avgDurationMs: avgDurationResult[0]?.avg || null,
 		},
 		subreddits: mergedSubreddits,

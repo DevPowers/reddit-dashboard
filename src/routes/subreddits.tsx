@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { getAdminData } from "../functions/admin.functions";
 import { AdminKPISection } from "../components/admin/AdminKPISection";
 import { SubredditTable } from "../components/admin/SubredditTable";
+import { RecentExecutions } from "../components/admin/RecentExecutions";
 
 export const Route = createFileRoute("/subreddits")({
 	loader: () => getAdminData(),
@@ -41,6 +42,8 @@ function AdminDashboard() {
 			</div>
 
 			<AdminKPISection data={data} />
+			
+			<RecentExecutions runs={data.cronStats.recentRuns || []} />
 			
 			<SubredditTable subreddits={data.subreddits} />
 		</div>
