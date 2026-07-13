@@ -479,24 +479,11 @@ export const runScrapeCycle = async () => {
 			})
 			.where(eq(cronLogs.id, log.id));
 
-		// --- Macro Metrics Daily Snapshot ---
-		// We want a daily snapshot of the macro metrics even if no new subreddits were scraped today.
-		const todayStart = new Date();
-		todayStart.setHours(0, 0, 0, 0);
-
-		const [recentMacro] = await db
-			.select({ id: platformHistoricalMetrics.id })
-			.from(platformHistoricalMetrics)
-			.where(gte(platformHistoricalMetrics.recordedAt, todayStart))
-			.limit(1);
-
-		if (!recentMacro) {
-			try {
-				await calculateAndSaveMacroMetrics();
-				logger.info("Cron", "Daily macro metrics snapshot calculated and saved.");
-			} catch (macroErr: any) {
-				logger.error("Cron", "Failed to calculate daily macro metrics", macroErr);
-			}
+		try {
+			await calculateAndSaveMacroMetrics();
+			logger.info("Cron", "Daily macro metrics snapshot calculated and saved.");
+		} catch (macroErr: any) {
+			logger.error("Cron", "Failed to calculate daily macro metrics", macroErr);
 		}
 
 		return {
