@@ -278,101 +278,99 @@ export const runScrapeCycle = async () => {
 			for (const sub of batch) {
 				const fetchStartMs = Date.now();
 				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
-				const usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
+				let response;
+				let attemptNum = sub.consecutiveFailures + 1;
+				let fetchStartMs = Date.now();
+				let usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
 
-				if (usePremium) {
-					scraperUrl += "&premium=true";
+				while (true) {
+					let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
+					if (usePremium) {
+						scraperUrl += "&premium=true";
+					}
+
+					const providerNameStr = usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
+					logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape r/${sub.name} using ${providerNameStr} (Key Index ${activeKeyRow!.keyIndex})...`);
+
+					await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
+					response = await fetchWithTimeout(scraperUrl, 60000);
+
+					if (response.ok) break; // Success!
+
+					logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
+
+					// If rate-limited or quota exhausted, lock the key for THIS cron run only
+					if (response.status === 429 || response.status === 403) {
+						exhaustedKeyIds.add(currentKeyRowId);
+						await db.update(scraperKeys).set({ lastErrorAt: new Date(), lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
+
+						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+						const availableKeys = allKeys.filter(k => !exhaustedKeyIds.has(k.id));
+
+						if (availableKeys.length === 0) {
+							const errMsg = "All ScraperAPI keys have been exhausted during this scrape cycle.";
+							logger.error("Cron", errMsg);
+
+							await db.update(cronLogs).set({
+								status: "failed",
+								errorMessage: errMsg,
+								durationMs: Date.now() - startTime,
+							}).where(eq(cronLogs.id, log.id));
+
+							return { message: "Scraping cycle aborted: " + errMsg, results };
+						}
+
+						// Pick the next available key (round-robin)
+						const currentIndex = allKeys.findIndex(k => k.id === currentKeyRowId);
+						let nextIndex = (currentIndex + 1) % allKeys.length;
+						while (exhaustedKeyIds.has(allKeys[nextIndex].id)) {
+							nextIndex = (nextIndex + 1) % allKeys.length;
+						}
+						const fallbackKeyRow = allKeys[nextIndex];
+
+						logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
+						await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
+						await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
+
+						activeKeyRow = fallbackKeyRow;
+						currentKeyRowId = fallbackKeyRow.id;
+						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
+						continue; // Try again with the new key
+					}
+
+					// For 500s or timeouts, log failure but don't rotate or lock
+					await db.update(scraperKeys).set({ lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
+					break; // Exit the while loop to move to the next subreddit
 				}
 
-				const attemptNum = sub.consecutiveFailures + 1;
-				const providerNameStr = usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
-				logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape r/${sub.name} using ${providerNameStr} (Key Index ${activeKeyRow!.keyIndex})...`);
-
-				await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-				
-				let response = await fetchWithTimeout(scraperUrl, 60000);
-
 				if (!response.ok) {
-					logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
-					
-					// Only hard-lock the key for 24 hours if we hit a concurrency/quota limit (429 or 403)
-					if (response.status === 429 || response.status === 403) {
-						await db.update(scraperKeys)
-							.set({ lastErrorAt: new Date(), lastStatus: "failed" })
-							.where(eq(scraperKeys.id, currentKeyRowId));
-					} else {
-						// For 408 Timeouts or 500s, just log the failure but keep the key alive in the pool
-						await db.update(scraperKeys)
-							.set({ lastStatus: "failed" })
-							.where(eq(scraperKeys.id, currentKeyRowId));
+					results.push({
+						name: sub.name,
+						status: "failed",
+						error: response.statusText,
+					});
+
+					const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
+
+					await db.insert(cronSubredditLogs).values({
+						cronLogId: log.id,
+						subredditId: sub.id,
+						status: "failed",
+						errorMessage: response.statusText || null,
+						httpCode: response.status || null,
+						usedPremium: usePremium,
+						provider: providerStr,
+						durationMs: Date.now() - fetchStartMs,
+						ranAt: sql`${getEasternTimeISO()}`,
+					});
+
+					// Increment consecutiveFailures if it's not a quota/rate limit error
+					if (response.status !== 403 && response.status !== 429) {
+						await db.update(subreddits)
+							.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
+							.where(eq(subreddits.id, sub.id));
 					}
-						
-					// Attempt Rotation ONLY if we hit a quota/rate limit error
-					let fallbackUsed = false;
-					if (response.status === 429 || response.status === 403) {
-						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
-						const currentIndex = allKeys.findIndex(k => k.id === currentKeyRowId);
-						const fallbackKeyRow = allKeys.length > 1 ? allKeys[(currentIndex + 1) % allKeys.length] : null;
-						
-						if (fallbackKeyRow && fallbackKeyRow.keyIndex <= envKeys.length) {
-							logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
-							await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
-							await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
-							
-							activeKeyRow = fallbackKeyRow;
-							currentKeyRowId = fallbackKeyRow.id;
-							currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
-							
-							scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
-							const fallbackUsePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
-							if (fallbackUsePremium) {
-								scraperUrl += "&premium=true";
-							}
-							
-							const fallbackProviderStr = fallbackUsePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
-							logger.info("Cron", `Switching to API key ${fallbackKeyRow.keyIndex} for provider ${fallbackProviderStr}...`);
-							logger.info("Cron", `[Attempt ${attemptNum} Fallback] Now trying to scrape r/${sub.name} using ${fallbackProviderStr} (Key Index ${fallbackKeyRow.keyIndex})...`);
-							
-							await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-							response = await fetchWithTimeout(scraperUrl, 60000);
-							fallbackUsed = true;
-						}
-					}
-					
-					if (!response.ok) {
-						if (fallbackUsed) {
-							logger.error("Cron", `[Attempt ${attemptNum} Fallback] Fetch completely failed for r/${sub.name}. Moving to next subreddit.`);
-						}
-						
-						results.push({
-							name: sub.name,
-							status: "failed",
-							error: response.statusText,
-						});
-						
-						const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
-						
-						await db.insert(cronSubredditLogs).values({
-							cronLogId: log.id,
-							subredditId: sub.id,
-							status: "failed",
-							errorMessage: response.statusText || null,
-							httpCode: response.status || null,
-							usedPremium: usePremium,
-							provider: providerStr,
-							durationMs: Date.now() - fetchStartMs,
-							ranAt: sql`${getEasternTimeISO()}`,
-						});
-						
-						// Increment consecutiveFailures if it's not a quota/rate limit error
-						if (response.status !== 403 && response.status !== 429) {
-							await db.update(subreddits)
-								.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
-								.where(eq(subreddits.id, sub.id));
-						}
-						continue;
-					}
+					continue;
 				}
 
 				await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
