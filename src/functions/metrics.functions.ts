@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { eq, asc, notInArray } from "drizzle-orm";
+import { eq, asc, notInArray, sql } from "drizzle-orm";
 import { db } from "../db/index.server";
 import { Category } from "../types";
 import {
@@ -45,32 +45,35 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 
 export const getPlatformHistory = createServerFn({ method: "GET" }).handler(
 	async () => {
+		// Check if raw scrape data is newer than the latest macro snapshot.
+		// If so, recalculate macro metrics before returning history.
+		const [latestScrape] = await db
+			.select({ maxRecordedAt: sql<string>`max(${metricsHistory.recordedAt})` })
+			.from(metricsHistory);
+
+		const [latestMacro] = await db
+			.select({ maxRecordedAt: sql<string>`max(${platformHistoricalMetrics.recordedAt})` })
+			.from(platformHistoricalMetrics);
+
+		const latestScrapeTime = latestScrape?.maxRecordedAt ? new Date(latestScrape.maxRecordedAt).getTime() : 0;
+		const latestMacroTime = latestMacro?.maxRecordedAt ? new Date(latestMacro.maxRecordedAt).getTime() : 0;
+
+		// Recalculate if: no macro exists yet, OR raw data is newer than the last macro snapshot
+		if (latestScrapeTime > latestMacroTime || latestMacroTime === 0) {
+			const { calculateAndSaveMacroMetrics } = await import("./macro");
+			try {
+				await calculateAndSaveMacroMetrics();
+			} catch (e) {
+				console.error("Failed to calculate macro metrics via UI staleness check:", e);
+			}
+		}
+
 		const history = await db
 			.select()
 			.from(platformHistoricalMetrics)
 			.orderBy(asc(platformHistoricalMetrics.recordedAt));
 
-		const todayStart = new Date();
-		todayStart.setUTCHours(0, 0, 0, 0);
-
-		let hasToday = false;
-		for (const row of history) {
-			if (new Date(row.recordedAt) >= todayStart) {
-				hasToday = true;
-				break;
-			}
-		}
-
-		if (!hasToday) {
-			const { calculateAndSaveMacroMetrics } = await import("./macro");
-			try {
-				const newRecord = await calculateAndSaveMacroMetrics();
-				history.push(newRecord);
-			} catch (e) {
-				console.error("Failed to calculate fallback macro metrics via UI trigger:", e);
-			}
-		}
-
 		return history;
 	},
 );
+
