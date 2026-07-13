@@ -205,7 +205,6 @@ export const runScrapeCycle = async () => {
 		const cutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
 
 		const successCutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
-		const failureRetryCutoff = new Date(Date.now() - (24 * 60 * 60 * 1000)); // 24 hour backoff
 
 		const lastSuccessResult = await db
 			.select({
@@ -216,34 +215,21 @@ export const runScrapeCycle = async () => {
 			.where(eq(cronSubredditLogs.status, "success"))
 			.groupBy(cronSubredditLogs.subredditId);
 
-		const lastAttemptResult = await db
-			.select({
-				subredditId: cronSubredditLogs.subredditId,
-				lastAttempt: sql<string>`max(${cronSubredditLogs.ranAt})`,
-			})
-			.from(cronSubredditLogs)
-			.groupBy(cronSubredditLogs.subredditId);
+
 
 		const lastSuccessMap = new Map<number, number>();
 		for (const row of lastSuccessResult) {
 			lastSuccessMap.set(row.subredditId, new Date(row.lastScraped).getTime());
 		}
 
-		const lastAttemptMap = new Map<number, number>();
-		for (const row of lastAttemptResult) {
-			lastAttemptMap.set(row.subredditId, new Date(row.lastAttempt).getTime());
-		}
+
 
 		// Filter out subreddits that have been scraped recently
 		const subs = allSubs.filter((sub) => {
 			const lastSuccessTime = lastSuccessMap.get(sub.id) || 0;
-			const lastAttemptTime = lastAttemptMap.get(sub.id) || 0;
 			
 			// If it succeeded within the interval, don't scrape
 			if (lastSuccessTime >= successCutoff.getTime()) return false;
-			
-			// If it failed, but we tried within the last 24 hours, don't scrape (backoff)
-			if (lastAttemptTime >= failureRetryCutoff.getTime()) return false;
 			
 			return true;
 		});
