@@ -35,8 +35,8 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 			<div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center">
 				<div>
 					<h2 className="text-2xl font-bold text-white mb-1">Aggregate Visitor Trend</h2>
-					<p className="text-text-muted text-sm font-medium">
-						Combined weekly unique visitors across the top 250 tracked subreddits over the last 30 days.
+					<p className="text-zinc-400 text-sm font-medium">
+						Combined weekly unique visitors across the top 250 tracked subreddits over time.
 					</p>
 				</div>
 				<div className="mt-4 md:mt-0 flex items-center space-x-4">
