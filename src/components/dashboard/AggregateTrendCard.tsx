@@ -34,7 +34,7 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 		<div className="w-full bg-[#161b1d] border border-white/10 rounded-xl overflow-hidden">
 			<div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center">
 				<div>
-					<h2 className="text-2xl font-bold text-white mb-1">Top 250 Aggregate Visitor Volume</h2>
+					<h2 className="text-2xl font-bold text-white mb-1">Top 250 Weekly Visitors</h2>
 					<p className="text-zinc-400 text-sm font-medium">
 						Tracking the combined sum of weekly unique visitors across the top 250 subreddits over time.
 					</p>

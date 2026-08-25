@@ -64,7 +64,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 							<tr className="text-xs tracking-widest uppercase text-zinc-400 border-b border-white/10">
 								<th className="py-4 px-6 font-medium">Subreddit</th>
 								<th className="py-4 px-6 font-medium text-right">Weekly Visitors</th>
-								<th className="py-4 px-6 font-medium text-right">30D Growth</th>
+								<th className="py-4 px-6 font-medium text-right">Net Growth</th>
 							</tr>
 						</thead>
 						<tbody className="text-sm divide-y divide-white/10">
@@ -103,7 +103,16 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 											<tr className="bg-[#121618] border-t-0 shadow-inner">
 												<td colSpan={3} className="py-6 px-6">
 													<div className="max-w-4xl mx-auto">
-														<h4 className="text-sm font-bold text-white mb-4">Visitor Growth Over Time</h4>
+														<div className="flex justify-between items-end mb-4">
+															<div>
+																<h4 className="text-sm font-bold text-white mb-1">Visitor Growth Over Time</h4>
+																{history.length > 0 && (
+																	<p className="text-xs text-zinc-400">
+																		Net Change: <span className={isPositive ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%</span> since {format(new Date(history[0].recordedAt), "MMM d, yyyy")}
+																	</p>
+																)}
+															</div>
+														</div>
 														<SubredditSparkline 
 															data={history.map(h => ({
 																date: format(new Date(h.recordedAt), "MMM dd"),
