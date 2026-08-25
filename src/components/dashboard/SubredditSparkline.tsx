@@ -7,6 +7,20 @@ interface Props {
 }
 
 export function SubredditSparkline({ data, dataKey, color }: Props) {
+	if (!data || data.length === 0) return null;
+	
+	if (data.length === 1) {
+		return (
+			<div className="h-[200px] w-full flex flex-col items-center justify-center border border-dashed border-white/10 rounded-lg bg-[#161b1d]/50">
+				<div className="w-2 h-2 rounded-full mb-3" style={{ backgroundColor: color }} />
+				<p className="text-zinc-400 text-sm font-medium">Insufficient Data</p>
+				<p className="text-zinc-500 text-xs mt-1 max-w-[250px] text-center">
+					Check back tomorrow for trend lines. Currently tracking {data[0][dataKey].toLocaleString()} visitors.
+				</p>
+			</div>
+		);
+	}
+
 	return (
 		<div className="h-[200px] w-full">
 			<ResponsiveContainer width="100%" height="100%">

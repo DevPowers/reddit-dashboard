@@ -61,11 +61,10 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse whitespace-nowrap">
 						<thead>
-							<tr className="text-xs tracking-widest uppercase text-text-muted border-b border-white/10">
+							<tr className="text-xs tracking-widest uppercase text-zinc-400 border-b border-white/10">
 								<th className="py-4 px-6 font-medium">Subreddit</th>
-								<th className="py-4 px-6 font-medium text-center">Weekly Visitors</th>
-								<th className="py-4 px-6 font-medium text-center">30D Growth</th>
-								<th className="py-4 px-6 font-medium text-right">Status</th>
+								<th className="py-4 px-6 font-medium text-right">Weekly Visitors</th>
+								<th className="py-4 px-6 font-medium text-right">30D Growth</th>
 							</tr>
 						</thead>
 						<tbody className="text-sm divide-y divide-white/10">
@@ -81,11 +80,11 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 								return (
 									<React.Fragment key={sub.name}>
 										<tr 
-											className="hover:bg-[#1a2124] transition-colors cursor-pointer group"
+											className="bg-[#161b1d] hover:bg-[#1a2124] transition-colors cursor-pointer group border-l-[3px] border-transparent hover:border-orangered"
 											onClick={() => toggleRow(sub.name)}
 										>
 											<td className="py-4 px-6 font-medium text-white flex items-center space-x-4">
-												<div className="text-text-muted">
+												<div className="text-zinc-500 group-hover:text-zinc-300 transition-colors">
 													{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 												</div>
 												<div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${avatarColors.bg} ${avatarColors.text}`}>
@@ -93,25 +92,16 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 												</div>
 												<span>r/{sub.name}</span>
 											</td>
-											<td className="py-4 px-6 text-center text-white">
+											<td className="py-4 px-6 text-right text-white">
 												{formatNumber(sub.weeklyVisitors)}
 											</td>
-											<td className={`py-4 px-6 text-center font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+											<td className={`py-4 px-6 text-right font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
 												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%
-											</td>
-											<td className="py-4 px-6 text-right">
-												<span className={`inline-flex items-center justify-center text-xs font-bold px-3 py-1 rounded-full ${
-													sub.isActive 
-													? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-													: 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
-												}`}>
-													{sub.isActive ? 'Active' : 'Stale'}
-												</span>
 											</td>
 										</tr>
 										{isExpanded && (
 											<tr className="bg-[#121618] border-t-0 shadow-inner">
-												<td colSpan={4} className="py-6 px-6">
+												<td colSpan={3} className="py-6 px-6">
 													<div className="max-w-4xl mx-auto">
 														<h4 className="text-sm font-bold text-white mb-4">Visitor Growth Over Time</h4>
 														<SubredditSparkline 
@@ -154,7 +144,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 							})}
 							{sortedData.length === 0 && (
 								<tr>
-									<td colSpan={4} className="py-12 text-center text-text-muted">
+									<td colSpan={3} className="py-12 text-center text-text-muted">
 										No subreddits found matching "{searchQuery}".
 									</td>
 								</tr>

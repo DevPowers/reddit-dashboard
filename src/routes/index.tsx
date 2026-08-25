@@ -112,8 +112,11 @@ function Dashboard() {
 	}, [dedupedDataToUse, historicalData]);
 
 	return (
-		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col">
-			<div className="flex-grow">
+		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col relative">
+			{/* Ambient background glow */}
+			<div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-orangered/5 blur-[120px] rounded-full pointer-events-none" />
+
+			<div className="flex-grow relative z-10">
 				<div className="mb-12">
 					<AggregateTrendCard 
 						totalVisitors={macroMetrics.totalWeeklyVisitors}

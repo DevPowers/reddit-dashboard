@@ -53,50 +53,61 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 			</div>
 
 			<div className="h-[300px] w-full px-4 pb-6">
-				<ResponsiveContainer width="100%" height="100%">
-					<AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-						<defs>
-							<linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-								<stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-							</linearGradient>
-							<linearGradient id="colorDecline" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-								<stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-							</linearGradient>
-						</defs>
-						<CartesianGrid
-							vertical={false}
-							stroke="rgba(255,255,255,0.05)"
-						/>
-						<XAxis
-							dataKey="date"
-							axisLine={false}
-							tickLine={false}
-							tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
-							tickMargin={12}
-							minTickGap={50}
-						/>
-						<Tooltip
-							contentStyle={{
-								backgroundColor: "#1f2937",
-								borderColor: "#374151",
-								borderRadius: "8px",
-								color: "#fff",
-							}}
-							itemStyle={{ color: "#fff" }}
-							formatter={(value: any) => [`${Number(value).toFixed(2)}%`, "Growth"]}
-						/>
-						<Area
-							type="monotone"
-							dataKey="Top 250 Growth"
-							stroke={isPositive ? "#10b981" : "#ef4444"}
-							strokeWidth={2}
-							fillOpacity={1}
-							fill={isPositive ? "url(#colorGrowth)" : "url(#colorDecline)"}
-						/>
-					</AreaChart>
-				</ResponsiveContainer>
+				{chartData.length <= 1 ? (
+					<div className="w-full h-full flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl bg-[#161b1d]/50">
+						<div className={`w-3 h-3 rounded-full mb-4 shadow-[0_0_15px_rgba(255,255,255,0.2)] ${isPositive ? 'bg-emerald-400' : 'bg-red-400'}`} />
+						<p className="text-zinc-400 text-sm font-medium">Accumulating Trend Data</p>
+						<p className="text-zinc-500 text-xs mt-2 max-w-sm text-center">
+							The chart requires at least two days of tracking to plot an aggregate trend line.
+							Check back tomorrow!
+						</p>
+					</div>
+				) : (
+					<ResponsiveContainer width="100%" height="100%">
+						<AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+							<defs>
+								<linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+									<stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+								</linearGradient>
+								<linearGradient id="colorDecline" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+									<stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+								</linearGradient>
+							</defs>
+							<CartesianGrid
+								vertical={false}
+								stroke="rgba(255,255,255,0.05)"
+							/>
+							<XAxis
+								dataKey="date"
+								axisLine={false}
+								tickLine={false}
+								tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
+								tickMargin={12}
+								minTickGap={50}
+							/>
+							<Tooltip
+								contentStyle={{
+									backgroundColor: "#1f2937",
+									borderColor: "#374151",
+									borderRadius: "8px",
+									color: "#fff",
+								}}
+								itemStyle={{ color: "#fff" }}
+								formatter={(value: any) => [`${Number(value).toFixed(2)}%`, "Growth"]}
+							/>
+							<Area
+								type="monotone"
+								dataKey="Top 250 Growth"
+								stroke={isPositive ? "#10b981" : "#ef4444"}
+								strokeWidth={2}
+								fillOpacity={1}
+								fill={isPositive ? "url(#colorGrowth)" : "url(#colorDecline)"}
+							/>
+						</AreaChart>
+					</ResponsiveContainer>
+				)}
 			</div>
 		</div>
 	);
