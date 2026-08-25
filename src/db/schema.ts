@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import {
 	integer,
 	pgTable,
-	primaryKey,
 	real,
 	serial,
 	timestamp,
@@ -14,6 +13,7 @@ import {
 export const subreddits = pgTable("subreddits", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 255 }).notNull().unique(),
+	isActive: boolean("is_active").default(true).notNull(),
 	consecutiveFailures: integer("consecutive_failures").default(0).notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
@@ -22,53 +22,7 @@ export const subreddits = pgTable("subreddits", {
 
 export const subredditsRelations = relations(subreddits, ({ many }) => ({
 	metrics: many(metricsHistory),
-	groupMembers: many(subredditGroups),
 }));
-
-export const trackingGroups = pgTable("tracking_groups", {
-	id: serial("id").primaryKey(),
-	category: varchar("category", { length: 50 }).notNull(),
-	subCategory: varchar("sub_category", { length: 100 }).notNull().unique(),
-	population: integer("population"),
-}).enableRLS();
-
-export const trackingGroupsRelations = relations(
-	trackingGroups,
-	({ many }) => ({
-		members: many(subredditGroups),
-	}),
-);
-
-export const subredditGroups = pgTable(
-	"subreddit_groups",
-	{
-		subredditId: integer("subreddit_id")
-			.references(() => subreddits.id, { onDelete: "cascade" })
-			.notNull(),
-		groupId: integer("group_id")
-			.references(() => trackingGroups.id, { onDelete: "cascade" })
-			.notNull(),
-	},
-	(t) => [
-		{
-			pk: primaryKey({ columns: [t.subredditId, t.groupId] }),
-		},
-	],
-).enableRLS();
-
-export const subredditGroupsRelations = relations(
-	subredditGroups,
-	({ one }) => ({
-		subreddit: one(subreddits, {
-			fields: [subredditGroups.subredditId],
-			references: [subreddits.id],
-		}),
-		group: one(trackingGroups, {
-			fields: [subredditGroups.groupId],
-			references: [trackingGroups.id],
-		}),
-	}),
-);
 
 export const metricsHistory = pgTable(
 	"metrics_history",
@@ -78,7 +32,6 @@ export const metricsHistory = pgTable(
 			.references(() => subreddits.id, { onDelete: "cascade" })
 			.notNull(),
 		weeklyVisitors: integer("weekly_visitors").notNull(),
-		weeklyContributions: integer("weekly_contributions").notNull(),
 		recordedAt: timestamp("recorded_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -104,48 +57,6 @@ export const cronLogs = pgTable("cron_logs", {
 	ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
 }).enableRLS();
 
-export const cronLogsRelations = relations(cronLogs, ({ many }) => ({
-	subredditLogs: many(cronSubredditLogs),
-}));
-
-export const cronSubredditLogs = pgTable(
-	"cron_subreddit_logs",
-	{
-		id: serial("id").primaryKey(),
-		cronLogId: integer("cron_log_id")
-			.references(() => cronLogs.id, { onDelete: "cascade" })
-			.notNull(),
-		subredditId: integer("subreddit_id")
-			.references(() => subreddits.id, { onDelete: "cascade" })
-			.notNull(),
-		status: varchar("status", { length: 50 }).notNull(), // 'success' or 'failed'
-		errorMessage: varchar("error_message", { length: 1000 }),
-		httpCode: integer("http_code"),
-		usedPremium: boolean("used_premium").default(false).notNull(),
-		provider: varchar("provider", { length: 50 }).default("scraperapi_standard").notNull(),
-		durationMs: integer("duration_ms").notNull(),
-		ranAt: timestamp("ran_at", { withTimezone: true }).defaultNow().notNull(),
-	},
-	(t) => [
-		index("cron_log_id_idx").on(t.cronLogId),
-		index("csl_subreddit_id_idx").on(t.subredditId),
-	],
-).enableRLS();
-
-export const cronSubredditLogsRelations = relations(
-	cronSubredditLogs,
-	({ one }) => ({
-		cronLog: one(cronLogs, {
-			fields: [cronSubredditLogs.cronLogId],
-			references: [cronLogs.id],
-		}),
-		subreddit: one(subreddits, {
-			fields: [cronSubredditLogs.subredditId],
-			references: [subreddits.id],
-		}),
-	}),
-);
-
 export const scraperKeys = pgTable("scraper_keys", {
 	id: serial("id").primaryKey(),
 	keyIndex: integer("key_index").notNull().unique(), // e.g. 1, 2, 3
@@ -164,11 +75,4 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	totalWeeklyVisitors: integer("total_weekly_visitors").notNull(),
 	visitorGrowthPercent: real("visitor_growth_percent").notNull().default(0),
 	netNewWeeklyVisitors: integer("net_new_weekly_visitors").notNull().default(0),
-	// Contribution metrics
-	totalWeeklyContributions: integer("total_weekly_contributions").notNull().default(0),
-	contributionGrowthPercent: real("contribution_growth_percent").notNull().default(0),
-	netNewWeeklyContributions: integer("net_new_weekly_contributions").notNull().default(0),
-	// ARPU Velocity
-	averageCommunityGrowth: real("average_community_growth").notNull(),
 }).enableRLS();
-

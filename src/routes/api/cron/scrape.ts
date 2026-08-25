@@ -1,21 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, gte, notInArray, asc, inArray, sql, and, lt } from "drizzle-orm";
-import { TARGET_SUBREDDITS, PREMIUM_PROXIED_SUBS } from "../../../data/subreddits";
+import { eq, asc, sql, and, lt } from "drizzle-orm";
 import { db } from "../../../db/index.server";
 import {
 	cronLogs,
-	cronSubredditLogs,
 	metricsHistory,
-	subredditGroups,
 	subreddits,
-	trackingGroups,
 	scraperKeys,
 } from "../../../db/schema";
 import { logger } from "../../../lib/logger";
 import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
 import { getEasternTimeISO } from "../../../lib/calculations";
-import { platformHistoricalMetrics } from "../../../db/schema";
 
 export const runScrapeCycle = async () => {
 
@@ -31,9 +26,8 @@ export const runScrapeCycle = async () => {
 		logger.error("Cron", "Missing SCRAPER_API_KEY_X environment variables.");
 		throw new Error("Missing SCRAPER_API_KEY_X environment variables.");
 	}
-	// --- Self-Healing: Clean up orphaned jobs ---
-	// If a previous Node process was abruptly killed (e.g. Vercel timeout, OOM, or manual kill),
-	// it will be stuck in 'running' forever. Any running job older than 2 hours is dead.
+	
+	// Self-Healing
 	const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 	await db
 		.update(cronLogs)
@@ -45,7 +39,6 @@ export const runScrapeCycle = async () => {
 			)
 		);
 
-	// --- Concurrency Lock ---
 	const runningJobs = await db
 		.select()
 		.from(cronLogs)
@@ -62,20 +55,18 @@ export const runScrapeCycle = async () => {
 		.returning();
 
 	const startTime = Date.now();
-	logger.info("Cron", "Starting scrape cycle...");
+	logger.info("Cron", "Starting scrape cycle for explore/most_visited...");
 
 	try {
 		const exhaustedKeyIds = new Set<number>();
-		// --- 0. Key Rotation Logic ---
 		let keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
 		
-		// Seed missing keys if env has more than DB
 		if (keysInDb.length < envKeys.length) {
-			logger.info("Cron", `Seeding new API keys into database. Env has ${envKeys.length}, DB has ${keysInDb.length}.`);
+			logger.info("Cron", `Seeding new API keys into database.`);
 			for (let i = keysInDb.length; i < envKeys.length; i++) {
 				await db.insert(scraperKeys).values({
 					keyIndex: i + 1,
-					isActive: keysInDb.length === 0 && i === 0, // Default to first key if totally empty
+					isActive: keysInDb.length === 0 && i === 0,
 				});
 			}
 			keysInDb = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
@@ -87,164 +78,11 @@ export const runScrapeCycle = async () => {
 			await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
 			activeKeyRow = keysInDb[0];
 			await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, activeKeyRow.id));
-			logger.info("Cron", `Rotated active key to index ${activeKeyRow.keyIndex}`);
 		}
 
 		let currentKeyString = envKeys[activeKeyRow.keyIndex - 1];
 		let currentKeyRowId = activeKeyRow.id;
-
-		// --- 1. Auto-Sync Database with TARGET_SUBREDDITS (Bulk Optimized) ---
-		const groupsToInsert = [];
-		const subsToInsert: { name: string }[] = [];
-		const groupNameToSubsMap = new Map<string, string[]>();
-		const expectedGroupSubCategories = new Set<string>();
-		const expectedSubNames = new Set<string>();
-
-		for (const group of TARGET_SUBREDDITS) {
-			expectedGroupSubCategories.add(group.subCategory);
-			groupsToInsert.push({
-				category: group.category,
-				subCategory: group.subCategory,
-				population: group.population,
-			});
-			groupNameToSubsMap.set(group.subCategory, group.subreddits);
-			for (const sub of group.subreddits) {
-				expectedSubNames.add(sub);
-				subsToInsert.push({ name: sub });
-			}
-		}
-
-		// Deduplicate subreddits before bulk insert
-		const uniqueSubs = Array.from(expectedSubNames).map(name => ({ name }));
-
-		const insertedGroups = await db
-			.insert(trackingGroups)
-			.values(groupsToInsert)
-			.onConflictDoUpdate({
-				target: trackingGroups.subCategory,
-				set: {
-					category: sql`EXCLUDED.category`,
-					population: sql`EXCLUDED.population`,
-				},
-			})
-			.returning({ id: trackingGroups.id, subCategory: trackingGroups.subCategory });
-
-		const insertedSubs = await db
-			.insert(subreddits)
-			.values(uniqueSubs)
-			.onConflictDoUpdate({
-				target: subreddits.name,
-				set: { name: sql`EXCLUDED.name` },
-			})
-			.returning({ id: subreddits.id, name: subreddits.name });
-
-		const groupMap = new Map(insertedGroups.map(g => [g.subCategory, g.id]));
-		const subMap = new Map(insertedSubs.map(s => [s.name, s.id]));
-		const membershipsToInsert = [];
-
-		for (const [subCategory, subNames] of groupNameToSubsMap.entries()) {
-			const groupId = groupMap.get(subCategory);
-			if (groupId) {
-				for (const name of subNames) {
-					const subId = subMap.get(name);
-					if (subId) {
-						membershipsToInsert.push({ subredditId: subId, groupId });
-					}
-				}
-			}
-		}
-
-		if (membershipsToInsert.length > 0) {
-			await db
-				.insert(subredditGroups)
-				.values(membershipsToInsert)
-				.onConflictDoNothing();
-		}
-
-		if (expectedGroupSubCategories.size > 0) {
-			// Delete removed groups
-			await db
-				.delete(trackingGroups)
-				.where(
-					notInArray(
-						trackingGroups.subCategory,
-						Array.from(expectedGroupSubCategories),
-					),
-				);
-		}
-
-		if (expectedSubNames.size > 0) {
-			// Prune removed subreddits from active tracking groups
-			const trackedSubs = await db
-				.select({ id: subreddits.id })
-				.from(subreddits)
-				.where(inArray(subreddits.name, Array.from(expectedSubNames)));
-
-			if (trackedSubs.length > 0) {
-				await db
-					.delete(subredditGroups)
-					.where(
-						notInArray(
-							subredditGroups.subredditId,
-							trackedSubs.map((s) => s.id),
-						),
-					);
-			}
-		}
-
-		// --- 2. Fetch Sync'd Subs and Scrape ---
-		const allSubs = await db
-			.selectDistinct({ id: subreddits.id, name: subreddits.name, consecutiveFailures: subreddits.consecutiveFailures })
-			.from(subreddits)
-			.innerJoin(subredditGroups, eq(subreddits.id, subredditGroups.subredditId));
 		
-		// Find which subreddits have already been scraped within the interval
-		const scrapeIntervalDays = parseInt(process.env.SCRAPE_INTERVAL_DAYS || "9", 10);
-		// Subtract a 12 hour wiggle room from the interval to prevent drift issues
-		// E.g., if interval is 3 days (72 hours), cutoff is 60 hours ago.
-		const cutoffHours = (scrapeIntervalDays * 24) - 12;
-		const cutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
-
-		const successCutoff = new Date(Date.now() - (cutoffHours * 60 * 60 * 1000));
-
-		const lastSuccessResult = await db
-			.select({
-				subredditId: cronSubredditLogs.subredditId,
-				lastScraped: sql<string>`max(${cronSubredditLogs.ranAt})`,
-			})
-			.from(cronSubredditLogs)
-			.where(eq(cronSubredditLogs.status, "success"))
-			.groupBy(cronSubredditLogs.subredditId);
-
-
-
-		const lastSuccessMap = new Map<number, number>();
-		for (const row of lastSuccessResult) {
-			lastSuccessMap.set(row.subredditId, new Date(row.lastScraped).getTime());
-		}
-
-
-
-		// Filter out subreddits that have been scraped recently
-		const subs = allSubs.filter((sub) => {
-			const lastSuccessTime = lastSuccessMap.get(sub.id) || 0;
-			
-			// If it succeeded within the interval, don't scrape
-			if (lastSuccessTime >= successCutoff.getTime()) return false;
-			
-			return true;
-		});
-
-		// Sort subreddits so the ones that have gone the longest without a successful scrape are targeted first
-		subs.sort((a, b) => {
-			const timeA = lastSuccessMap.get(a.id) || 0;
-			const timeB = lastSuccessMap.get(b.id) || 0;
-			return timeA - timeB;
-		});
-
-		const results: any[] = [];
-		const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
 		const fetchWithTimeout = async (url: string, ms: number) => {
 			const controller = new AbortController();
 			const id = setTimeout(() => controller.abort(), ms);
@@ -258,223 +96,135 @@ export const runScrapeCycle = async () => {
 			}
 		};
 
-		// Batching by 5
-		for (let i = 0; i < subs.length; i += 5) {
-			const batch = subs.slice(i, i + 5);
+		let response;
+		let attemptNum = 1;
+		const targetUrl = "https://www.reddit.com/explore/most_visited/";
+		
+		while (true) {
+			const scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
 
-			for (const sub of batch) {
-				const fetchStartMs = Date.now();
-				const targetUrl = `https://www.reddit.com/r/${sub.name}/`;
-				let response;
-				let attemptNum = sub.consecutiveFailures + 1;
-				let usePremium = PREMIUM_PROXIED_SUBS.includes(sub.name) || sub.consecutiveFailures >= 1;
+			logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape explore/most_visited using ScraperAPI Standard (Key Index ${activeKeyRow!.keyIndex})...`);
 
-				while (true) {
-					let scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&wait_for_selector=shreddit-subreddit-header`;
-					if (usePremium) {
-						scraperUrl += "&premium=true";
-					}
+			await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
+			response = await fetchWithTimeout(scraperUrl, 60000);
 
-					const providerNameStr = usePremium ? "ScraperAPI Premium" : "ScraperAPI Standard";
-					logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape r/${sub.name} using ${providerNameStr} (Key Index ${activeKeyRow!.keyIndex})...`);
+			if (response.ok) break;
 
-					await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
-					response = await fetchWithTimeout(scraperUrl, 60000);
+			logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
 
-					if (response.ok) break; // Success!
+			if (response.status === 429 || response.status === 403) {
+				exhaustedKeyIds.add(currentKeyRowId);
+				await db.update(scraperKeys).set({ lastErrorAt: new Date(), lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
 
-					logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape r/${sub.name} using ${providerNameStr}. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
+				const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
+				const availableKeys = allKeys.filter(k => !exhaustedKeyIds.has(k.id));
 
-					// If rate-limited or quota exhausted, lock the key for THIS cron run only
-					if (response.status === 429 || response.status === 403) {
-						exhaustedKeyIds.add(currentKeyRowId);
-						await db.update(scraperKeys).set({ lastErrorAt: new Date(), lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
+				if (availableKeys.length === 0) {
+					const errMsg = "Data keys exhausted.";
+					logger.error("Cron", errMsg);
 
-						const allKeys = await db.select().from(scraperKeys).orderBy(asc(scraperKeys.keyIndex));
-						const availableKeys = allKeys.filter(k => !exhaustedKeyIds.has(k.id));
+					await db.update(cronLogs).set({
+						status: "failed",
+						errorMessage: errMsg,
+						durationMs: Date.now() - startTime,
+					}).where(eq(cronLogs.id, log.id));
 
-						if (availableKeys.length === 0) {
-							const errMsg = "All ScraperAPI keys have been exhausted during this scrape cycle.";
-							logger.error("Cron", errMsg);
-
-							await db.update(cronLogs).set({
-								status: "failed",
-								errorMessage: errMsg,
-								durationMs: Date.now() - startTime,
-							}).where(eq(cronLogs.id, log.id));
-
-							return { message: "Scraping cycle aborted: " + errMsg, results };
-						}
-
-						// Pick the next available key (round-robin)
-						const currentIndex = allKeys.findIndex(k => k.id === currentKeyRowId);
-						let nextIndex = (currentIndex + 1) % allKeys.length;
-						while (exhaustedKeyIds.has(allKeys[nextIndex].id)) {
-							nextIndex = (nextIndex + 1) % allKeys.length;
-						}
-						const fallbackKeyRow = allKeys[nextIndex];
-
-						logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
-						await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
-						await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
-
-						activeKeyRow = fallbackKeyRow;
-						currentKeyRowId = fallbackKeyRow.id;
-						currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
-						continue; // Try again with the new key
-					}
-
-					// For 500s or timeouts, log failure but don't rotate or lock
-					await db.update(scraperKeys).set({ lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
-					break; // Exit the while loop to move to the next subreddit
+					return { message: "Scraping cycle aborted: " + errMsg, results: [] };
 				}
 
-				if (!response.ok) {
-					results.push({
-						name: sub.name,
-						status: "failed",
-						error: response.statusText,
-					});
-
-					const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
-
-					await db.insert(cronSubredditLogs).values({
-						cronLogId: log.id,
-						subredditId: sub.id,
-						status: "failed",
-						errorMessage: response.statusText || null,
-						httpCode: response.status || null,
-						usedPremium: usePremium,
-						provider: providerStr,
-						durationMs: Date.now() - fetchStartMs,
-						ranAt: sql`${getEasternTimeISO()}`,
-					});
-
-					// Increment consecutiveFailures if it's not a quota/rate limit error
-					if (response.status !== 403 && response.status !== 429) {
-						await db.update(subreddits)
-							.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
-							.where(eq(subreddits.id, sub.id));
-					}
-					continue;
+				const currentIndex = allKeys.findIndex(k => k.id === currentKeyRowId);
+				let nextIndex = (currentIndex + 1) % allKeys.length;
+				while (exhaustedKeyIds.has(allKeys[nextIndex].id)) {
+					nextIndex = (nextIndex + 1) % allKeys.length;
 				}
+				const fallbackKeyRow = allKeys[nextIndex];
 
-				await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
-				const html = await response.text();
-				const $ = cheerio.load(html);
+				logger.info("Cron", `Rotating to fallback key index ${fallbackKeyRow.keyIndex}`);
+				await db.update(scraperKeys).set({ isActive: false }).where(eq(scraperKeys.isActive, true));
+				await db.update(scraperKeys).set({ isActive: true }).where(eq(scraperKeys.id, fallbackKeyRow.id));
 
-				const header = $("shreddit-subreddit-header");
-				const wauAttr = header.attr("weekly-active-users");
-				const wcAttr = header.attr("weekly-contributions");
-				const weekly_visitors = Number(wauAttr);
-				const weekly_contributions = Number(wcAttr);
-
-				// Placeholder Validation Guard: Reddit's new web components serve a generic 3000/100 placeholder 
-				// if the scraper is blocked from executing the client-side GraphQL hydration.
-				if (weekly_visitors === 3000 && weekly_contributions === 100) {
-					logger.warn("Cron", `Anti-Bot Detection for ${sub.name}. Generic un-hydrated placeholder.`);
-					results.push({
-						name: sub.name,
-						status: "failed",
-						error: "Anti-Bot Detection Placeholder",
-					});
-					await db.insert(cronSubredditLogs).values({
-						cronLogId: log.id,
-						subredditId: sub.id,
-						status: "failed",
-						errorMessage: "Anti-Bot Detection Placeholder",
-						httpCode: response.status || null,
-						usedPremium: usePremium,
-						provider: usePremium ? "scraperapi_premium" : "scraperapi_standard",
-						durationMs: Date.now() - fetchStartMs,
-						ranAt: sql`${getEasternTimeISO()}`,
-					});
-					await db.update(subreddits)
-						.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
-						.where(eq(subreddits.id, sub.id));
-					continue;
-				}
-
-				if (isNaN(weekly_visitors) || isNaN(weekly_contributions) || (weekly_visitors === 0 && weekly_contributions === 0)) {
-					logger.warn("Cron", `Missing or zero metrics for ${sub.name}. DOM may have changed or page didn't fully render.`);
-					results.push({
-						name: sub.name,
-						status: "failed",
-						error: "DOM parse failed or zero metrics",
-					});
-					await db.insert(cronSubredditLogs).values({
-						cronLogId: log.id,
-						subredditId: sub.id,
-						status: "failed",
-						errorMessage: "DOM parse failed or zero metrics",
-						httpCode: response.status || null,
-						usedPremium: usePremium,
-						provider: usePremium ? "scraperapi_premium" : "scraperapi_standard",
-						durationMs: Date.now() - fetchStartMs,
-						ranAt: sql`${getEasternTimeISO()}`,
-					});
-					await db.update(subreddits)
-						.set({ consecutiveFailures: sub.consecutiveFailures + 1 })
-						.where(eq(subreddits.id, sub.id));
-					continue;
-				}
-
-				await db.insert(metricsHistory).values({
-					subredditId: sub.id,
-					weeklyVisitors: weekly_visitors,
-					weeklyContributions: weekly_contributions,
-					recordedAt: sql`${getEasternTimeISO()}`,
-				});
-
-				const providerStr = usePremium ? "scraperapi_premium" : "scraperapi_standard";
-
-				await db.insert(cronSubredditLogs).values({
-					cronLogId: log.id,
-					subredditId: sub.id,
-					status: "success",
-					errorMessage: null,
-					httpCode: response.status || null,
-					usedPremium: usePremium,
-					provider: providerStr,
-					durationMs: Date.now() - fetchStartMs,
-					ranAt: sql`${getEasternTimeISO()}`,
-				});
-
-				// Reset failures on success
-				if (sub.consecutiveFailures > 0) {
-					await db.update(subreddits).set({ consecutiveFailures: 0 }).where(eq(subreddits.id, sub.id));
-				}
-				logger.info("Cron", `[Attempt ${attemptNum}] Successfully scraped r/${sub.name} using ${providerStr}. Visitors: ${weekly_visitors}, Contributions: ${weekly_contributions}`);
-
-				results.push({
-					name: sub.name,
-					status: "success",
-					weeklyVisitors: weekly_visitors,
-					weeklyContributions: weekly_contributions,
-				});
+				activeKeyRow = fallbackKeyRow;
+				currentKeyRowId = fallbackKeyRow.id;
+				currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
+				attemptNum++;
+				continue;
 			}
 
-			// Slight delay between batches
-			if (i + 5 < subs.length) {
-				await delay(500);
-			}
+			// Non-auth error
+			break;
 		}
-		const failedCount = results.filter(r => r.status === "failed").length;
-		const failureThreshold = Math.max(Math.floor(subs.length * 0.2), 1);
-		const finalStatus = failedCount > failureThreshold ? "failed" : "success";
-		const errorMessage = failedCount > 0 ? `${failedCount} out of ${subs.length} subreddits failed to fetch (Status: ${finalStatus})` : null;
 
-		if (finalStatus === "failed") {
-			logger.warn("Cron", "Scrape cycle completed with failures", { failedCount });
-		} else {
-			logger.info("Cron", `Scrape cycle completely finished. Processed ${results.filter(r => r.status === "success").length} subreddits.`);
+		if (!response.ok) {
+			const msg = `Failed to fetch from proxy. Status: ${response.status}`;
+			await db.update(cronLogs).set({
+				status: "failed",
+				errorMessage: msg,
+				durationMs: Date.now() - startTime,
+			}).where(eq(cronLogs.id, log.id));
+			return { message: msg, results: [] };
+		}
+
+		await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
+		const html = await response.text();
+		const $ = cheerio.load(html);
+
+		const parsedSubreddits: { name: string, weeklyVisitors: number }[] = [];
+		
+		$('.flex.flex-col.flex-1.px-xs').each((_, el) => {
+			const name = $(el).find('h4').text().trim();
+			const visitorsStr = $(el).find('faceplate-number').attr('number');
+			
+			if (name && visitorsStr) {
+				const weeklyVisitors = parseInt(visitorsStr, 10);
+				if (!isNaN(weeklyVisitors)) {
+					parsedSubreddits.push({ name, weeklyVisitors });
+				}
+			}
+		});
+
+		if (parsedSubreddits.length === 0) {
+			const msg = "DOM parse failed or zero subreddits found.";
+			await db.update(cronLogs).set({
+				status: "failed",
+				errorMessage: msg,
+				durationMs: Date.now() - startTime,
+			}).where(eq(cronLogs.id, log.id));
+			return { message: msg, results: [] };
+		}
+
+		logger.info("Cron", `Successfully parsed ${parsedSubreddits.length} subreddits from explore/most_visited.`);
+
+		// 1. Reset all active subreddits to inactive
+		await db.update(subreddits).set({ isActive: false });
+
+		const currentTime = sql`${getEasternTimeISO()}`;
+
+		// 2. Upsert the 250 subreddits and mark active
+		for (const sub of parsedSubreddits) {
+			const inserted = await db.insert(subreddits).values({
+				name: sub.name,
+				isActive: true,
+				consecutiveFailures: 0,
+			}).onConflictDoUpdate({
+				target: subreddits.name,
+				set: { isActive: true, consecutiveFailures: 0 }
+			}).returning({ id: subreddits.id });
+			
+			const dbId = inserted[0].id;
+			
+			// 3. Insert into metricsHistory
+			await db.insert(metricsHistory).values({
+				subredditId: dbId,
+				weeklyVisitors: sub.weeklyVisitors,
+				recordedAt: currentTime,
+			});
 		}
 
 		await db
 			.update(cronLogs)
 			.set({
-				status: finalStatus,
-				errorMessage: errorMessage,
+				status: "success",
+				errorMessage: null,
 				durationMs: Date.now() - startTime,
 			})
 			.where(eq(cronLogs.id, log.id));
@@ -487,8 +237,8 @@ export const runScrapeCycle = async () => {
 		}
 
 		return {
-			message: finalStatus === "success" ? "Scraping cycle completed." : "Scraping cycle completed with some errors.",
-			results,
+			message: "Scraping cycle completed successfully.",
+			results: parsedSubreddits.length,
 		};
 	} catch (e: any) {
 		logger.error("Cron", "Critical error in scrape handler", e);

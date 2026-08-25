@@ -92,14 +92,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 									>
 										Dashboard
 									</Link>
-									<Link
-										to="/subreddits"
-										className="text-sm font-semibold text-text-muted hover:text-white transition-colors cursor-pointer pb-1"
-										activeProps={{ className: "text-white border-b-2 border-white" }}
-										preload="render"
-									>
-										Subreddits
-									</Link>
 								</nav>
 							</div>
 						</div>
