@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, asc, sql, and, lt } from "drizzle-orm";
+import { eq, asc, sql, and, lt, gte } from "drizzle-orm";
 import { db } from "../../../db/index.server";
 import {
 	cronLogs,
@@ -47,6 +47,25 @@ export const runScrapeCycle = async () => {
 	if (runningJobs.length > 0) {
 		logger.warn("Cron", "A scrape job is already running. Aborting concurrent execution.");
 		return new Response(JSON.stringify({ error: "Scrape job already running" }), { status: 409 });
+	}
+
+	// 1-Run-Per-Day Limit (Deduplication)
+	const todayStart = new Date();
+	todayStart.setUTCHours(0, 0, 0, 0);
+
+	const successfulJobsToday = await db
+		.select()
+		.from(cronLogs)
+		.where(
+			and(
+				eq(cronLogs.status, "success"),
+				gte(cronLogs.ranAt, todayStart)
+			)
+		);
+
+	if (successfulJobsToday.length > 0) {
+		logger.info("Cron", "A successful scrape was already completed today. Aborting to prevent duplicate scrapes and save API credits.");
+		return { message: "Already scraped today successfully.", results: [] };
 	}
 
 	const [log] = await db
