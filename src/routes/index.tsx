@@ -6,6 +6,7 @@ import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
 // Import new simplified components
 import { AggregateTrendCard } from "../components/dashboard/AggregateTrendCard";
 import { TrackedSubredditsIndex } from "../components/dashboard/TrackedSubredditsIndex";
+import { MacroMetricsGrid } from "../components/dashboard/MacroMetricsGrid";
 import { AdminFooter } from "../components/admin/AdminFooter";
 
 export const Route = createFileRoute("/")({
@@ -94,13 +95,15 @@ function Dashboard() {
 			<div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-orangered/5 blur-[120px] rounded-full pointer-events-none" />
 
 			<div className="flex-grow relative z-10">
-				<div className="mb-12">
+				<div className="mb-8">
 					<AggregateTrendCard 
 						totalVisitors={macroMetrics.totalWeeklyVisitors}
 						growthPercent={macroMetrics.visitorGrowthPercent}
 						chartData={chartData}
 					/>
 				</div>
+
+				<MacroMetricsGrid platformHistory={platformHistory} />
 				
 				<div className="mb-12">
 					<TrackedSubredditsIndex latestData={latestData} allData={dedupedDataToUse} />

@@ -75,4 +75,11 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	totalWeeklyVisitors: integer("total_weekly_visitors").notNull(),
 	visitorGrowthPercent: real("visitor_growth_percent").notNull().default(0),
 	netNewWeeklyVisitors: integer("net_new_weekly_visitors").notNull().default(0),
+	
+	// Statistical metrics
+	medianVisitors: integer("median_visitors").notNull().default(0),
+	minVisitors: integer("min_visitors").notNull().default(0),
+	maxVisitors: integer("max_visitors").notNull().default(0),
+	averageVisitors: integer("average_visitors").notNull().default(0),
+	top10Concentration: real("top_10_concentration").notNull().default(0),
 }).enableRLS();

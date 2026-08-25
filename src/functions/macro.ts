@@ -87,6 +87,34 @@ export const calculateAndSaveMacroMetrics = async () => {
 			: 0;
 	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorBaselineReach;
 
+	// --- Statistical Metrics ---
+	const sortedLatest = [...latestData].sort((a, b) => a.weeklyVisitors - b.weeklyVisitors);
+	const numSubreddits = sortedLatest.length;
+	
+	let medianVisitors = 0;
+	let minVisitors = 0;
+	let maxVisitors = 0;
+	let averageVisitors = 0;
+	let top10Concentration = 0;
+
+	if (numSubreddits > 0) {
+		minVisitors = sortedLatest[0].weeklyVisitors;
+		maxVisitors = sortedLatest[numSubreddits - 1].weeklyVisitors;
+		averageVisitors = Math.round(totalLatestReach / numSubreddits);
+
+		const mid = Math.floor(numSubreddits / 2);
+		medianVisitors = numSubreddits % 2 !== 0 
+			? sortedLatest[mid].weeklyVisitors 
+			: Math.round((sortedLatest[mid - 1].weeklyVisitors + sortedLatest[mid].weeklyVisitors) / 2);
+
+		// Top 10 Concentration
+		const top10Sum = sortedLatest
+			.slice(-10) // get the 10 largest
+			.reduce((sum, sub) => sum + sub.weeklyVisitors, 0);
+		top10Concentration = totalLatestReach > 0 ? (top10Sum / totalLatestReach) * 100 : 0;
+	}
+	// ---------------------------
+
 	const todayStart = new Date();
 	todayStart.setUTCHours(0, 0, 0, 0);
 
@@ -96,14 +124,21 @@ export const calculateAndSaveMacroMetrics = async () => {
 		.where(gte(platformHistoricalMetrics.recordedAt, todayStart))
 		.limit(1);
 
+	const metricsPayload = {
+		totalWeeklyVisitors: totalLatestReach,
+		visitorGrowthPercent: overallGrowthPercent,
+		netNewWeeklyVisitors: overallNetNewReach,
+		medianVisitors,
+		minVisitors,
+		maxVisitors,
+		averageVisitors,
+		top10Concentration,
+	};
+
 	if (existingToday.length > 0) {
 		const [updated] = await db
 			.update(platformHistoricalMetrics)
-			.set({
-				totalWeeklyVisitors: totalLatestReach,
-				visitorGrowthPercent: overallGrowthPercent,
-				netNewWeeklyVisitors: overallNetNewReach,
-			})
+			.set(metricsPayload)
 			.where(eq(platformHistoricalMetrics.id, existingToday[0].id))
 			.returning();
 		return updated;
@@ -111,11 +146,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 
 	const [inserted] = await db
 		.insert(platformHistoricalMetrics)
-		.values({
-			totalWeeklyVisitors: totalLatestReach,
-			visitorGrowthPercent: overallGrowthPercent,
-			netNewWeeklyVisitors: overallNetNewReach,
-		})
+		.values(metricsPayload)
 		.returning();
 
 	return inserted;
