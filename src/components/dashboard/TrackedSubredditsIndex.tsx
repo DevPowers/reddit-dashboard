@@ -52,23 +52,23 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 						placeholder="Search subreddits..." 
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="w-full bg-[#161b1d] border border-surface-border rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder-text-muted focus:outline-none focus:border-text-muted transition-colors"
+						className="w-full bg-[#161b1d] border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder-text-muted focus:outline-none focus:border-white/20 transition-colors"
 					/>
 				</div>
 			</div>
 			
-			<div className="bg-[#161b1d] border border-surface-border rounded-xl shadow-lg overflow-hidden">
+			<div className="bg-[#161b1d] border border-white/10 rounded-xl overflow-hidden">
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse whitespace-nowrap">
 						<thead>
-							<tr className="text-xs font-mono tracking-widest uppercase text-text-muted border-b border-surface-border">
+							<tr className="text-xs tracking-widest uppercase text-text-muted border-b border-white/10">
 								<th className="py-4 px-6 font-medium">Subreddit</th>
-								<th className="py-4 px-6 font-medium text-center">Daily Avg</th>
+								<th className="py-4 px-6 font-medium text-center">Weekly Visitors</th>
 								<th className="py-4 px-6 font-medium text-center">30D Growth</th>
 								<th className="py-4 px-6 font-medium text-right">Status</th>
 							</tr>
 						</thead>
-						<tbody className="text-sm divide-y divide-surface-border">
+						<tbody className="text-sm divide-y divide-white/10">
 							{sortedData.map((sub) => {
 								const isExpanded = expandedSub === sub.name;
 								const isPositive = sub.growthPercent >= 0;
@@ -93,10 +93,10 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 												</div>
 												<span>r/{sub.name}</span>
 											</td>
-											<td className="py-4 px-6 text-center text-white font-mono">
-												{formatNumber(sub.weeklyVisitors / 7)}
+											<td className="py-4 px-6 text-center text-white">
+												{formatNumber(sub.weeklyVisitors)}
 											</td>
-											<td className={`py-4 px-6 text-center font-mono font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+											<td className={`py-4 px-6 text-center font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
 												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%
 											</td>
 											<td className="py-4 px-6 text-right">
@@ -122,6 +122,29 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 															dataKey="weeklyVisitors"
 															color={isPositive ? "#10b981" : "#ef4444"}
 														/>
+														<h4 className="text-sm font-bold text-white mb-3 mt-8">Raw Data (Last 50 Records)</h4>
+														<div className="bg-[#161b1d] rounded-lg border border-white/10 overflow-hidden">
+															<table className="w-full text-left text-xs">
+																<thead className="bg-[#121618] border-b border-white/10 text-text-muted uppercase">
+																	<tr>
+																		<th className="py-2 px-4">Date Recorded</th>
+																		<th className="py-2 px-4 text-right">Weekly Visitors</th>
+																	</tr>
+																</thead>
+																<tbody className="divide-y divide-white/10">
+																	{[...history].reverse().slice(0, 50).map((record, i) => (
+																		<tr key={i} className="hover:bg-white/5">
+																			<td className="py-2 px-4 font-mono text-text-muted">
+																				{format(new Date(record.recordedAt), "PPp")}
+																			</td>
+																			<td className="py-2 px-4 text-right font-mono text-white">
+																				{record.weeklyVisitors.toLocaleString()}
+																			</td>
+																		</tr>
+																	))}
+																</tbody>
+															</table>
+														</div>
 													</div>
 												</td>
 											</tr>

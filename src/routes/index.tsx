@@ -114,12 +114,6 @@ function Dashboard() {
 	return (
 		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col">
 			<div className="flex-grow">
-				<div className="mb-10 border-b border-surface-border pb-4">
-					<h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-						Reddit Top 250 Tracker
-					</h1>
-				</div>
-
 				<div className="mb-12">
 					<AggregateTrendCard 
 						totalVisitors={macroMetrics.totalWeeklyVisitors}
