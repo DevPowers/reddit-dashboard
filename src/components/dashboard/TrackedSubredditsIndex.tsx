@@ -11,17 +11,12 @@ interface SubredditIndexProps {
 export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexProps) {
 	const [expandedSub, setExpandedSub] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 10;
 
 	const sortedData = useMemo(() => {
 		return [...latestData]
 			.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
 			.sort((a, b) => b.weeklyVisitors - a.weeklyVisitors);
 	}, [latestData, searchQuery]);
-
-	const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-	const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
 	const toggleRow = (subName: string) => {
 		setExpandedSub(expandedSub === subName ? null : subName);
@@ -56,10 +51,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 						type="text" 
 						placeholder="Search subreddits..." 
 						value={searchQuery}
-						onChange={(e) => {
-							setSearchQuery(e.target.value);
-							setCurrentPage(1);
-						}}
+						onChange={(e) => setSearchQuery(e.target.value)}
 						className="w-full bg-[#161b1d] border border-surface-border rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder-text-muted focus:outline-none focus:border-text-muted transition-colors"
 					/>
 				</div>
@@ -77,7 +69,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 							</tr>
 						</thead>
 						<tbody className="text-sm divide-y divide-surface-border">
-							{paginatedData.map((sub) => {
+							{sortedData.map((sub) => {
 								const isExpanded = expandedSub === sub.name;
 								const isPositive = sub.growthPercent >= 0;
 								const avatarColors = getAvatarColors(sub.name);
@@ -137,7 +129,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 									</React.Fragment>
 								);
 							})}
-							{paginatedData.length === 0 && (
+							{sortedData.length === 0 && (
 								<tr>
 									<td colSpan={4} className="py-12 text-center text-text-muted">
 										No subreddits found matching "{searchQuery}".
@@ -146,29 +138,6 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 							)}
 						</tbody>
 					</table>
-				</div>
-			</div>
-			
-			<div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-sm">
-				<div className="text-text-muted font-mono mb-4 sm:mb-0">
-					Showing {sortedData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
-					{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length}
-				</div>
-				<div className="flex space-x-2">
-					<button 
-						onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-						disabled={currentPage === 1}
-						className="px-4 py-2 bg-[#161b1d] border border-surface-border text-white rounded-md hover:bg-[#1a2124] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-mono cursor-pointer"
-					>
-						Prev
-					</button>
-					<button 
-						onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-						disabled={currentPage === totalPages || totalPages === 0}
-						className="px-4 py-2 bg-[#161b1d] border border-surface-border text-white rounded-md hover:bg-[#1a2124] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-mono cursor-pointer"
-					>
-						Next
-					</button>
 				</div>
 			</div>
 		</div>
