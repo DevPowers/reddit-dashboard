@@ -101,9 +101,9 @@ export const runScrapeCycle = async () => {
 		const targetUrl = "https://www.reddit.com/explore/most_visited/";
 		
 		while (true) {
-			const scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true`;
+			const scraperUrl = `https://api.scraperapi.com/?api_key=${currentKeyString}&url=${encodeURIComponent(targetUrl)}&render=true&premium=true`;
 
-			logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape explore/most_visited using ScraperAPI Standard (Key Index ${activeKeyRow!.keyIndex})...`);
+			logger.info("Cron", `[Attempt ${attemptNum}] Now trying to scrape explore/most_visited using ScraperAPI Premium (Key Index ${activeKeyRow!.keyIndex})...`);
 
 			await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 			response = await fetchWithTimeout(scraperUrl, 60000);
