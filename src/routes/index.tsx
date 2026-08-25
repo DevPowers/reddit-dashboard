@@ -74,28 +74,19 @@ function Dashboard() {
 	}, [platformHistory]);
 
 	const chartData = useMemo(() => {
-		const byDate = new Map<string, { sortKey: number, totalVisitors: number }>();
-
-		for (const row of dedupedDataToUse) {
-			const recordedDate = new Date(row.recordedAt);
-			const dateKey = format(recordedDate, "MMM dd");
-			
-			if (!byDate.has(dateKey)) {
-				byDate.set(dateKey, { sortKey: recordedDate.getTime(), totalVisitors: 0 });
-			}
-			
-			const entry = byDate.get(dateKey)!;
-			entry.sortKey = Math.min(entry.sortKey, recordedDate.getTime());
-			entry.totalVisitors += row.weeklyVisitors;
+		// Filter out duplicate dates to ensure a clean chart line
+		const uniqueDates = new Map<string, typeof platformHistory[0]>();
+		
+		for (const snapshot of platformHistory) {
+			const dateKey = format(new Date(snapshot.recordedAt), "MMM dd");
+			uniqueDates.set(dateKey, snapshot);
 		}
 
-		return Array.from(byDate.entries())
-			.sort(([, a], [, b]) => a.sortKey - b.sortKey)
-			.map(([date, stats]) => ({
-				date,
-				"Total Visitors": stats.totalVisitors
-			}));
-	}, [dedupedDataToUse]);
+		return Array.from(uniqueDates.values()).map(snapshot => ({
+			date: format(new Date(snapshot.recordedAt), "MMM dd"),
+			"Total Visitors": snapshot.totalWeeklyVisitors
+		}));
+	}, [platformHistory]);
 
 	return (
 		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col relative">
