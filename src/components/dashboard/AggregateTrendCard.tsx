@@ -34,9 +34,9 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 		<div className="w-full bg-[#161b1d] border border-white/10 rounded-xl overflow-hidden">
 			<div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center">
 				<div>
-					<h2 className="text-2xl font-bold text-white mb-1">Aggregate Visitor Trend</h2>
+					<h2 className="text-2xl font-bold text-white mb-1">Top 250 Aggregate Visitor Volume</h2>
 					<p className="text-zinc-400 text-sm font-medium">
-						Combined weekly unique visitors across the top 250 tracked subreddits over time.
+						Tracking the combined sum of weekly unique visitors across the top 250 subreddits over time.
 					</p>
 				</div>
 				<div className="mt-4 md:mt-0 flex items-center space-x-4">
@@ -95,11 +95,17 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 									color: "#fff",
 								}}
 								itemStyle={{ color: "#fff" }}
-								formatter={(value: any) => [`${Number(value).toFixed(2)}%`, "Growth"]}
+								formatter={(value: any) => {
+									const num = Number(value);
+									let formatted = num.toString();
+									if (num >= 1000000) formatted = (num / 1000000).toFixed(1) + 'M';
+									else if (num >= 1000) formatted = (num / 1000).toFixed(1) + 'K';
+									return [formatted, "Total Visitors"];
+								}}
 							/>
 							<Area
 								type="monotone"
-								dataKey="Top 250 Growth"
+								dataKey="Total Visitors"
 								stroke={isPositive ? "#10b981" : "#ef4444"}
 								strokeWidth={2}
 								fillOpacity={1}

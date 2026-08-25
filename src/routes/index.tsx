@@ -35,7 +35,7 @@ function Dashboard() {
 		return Array.from(map.values());
 	}, [serverData]);
 
-	const { latestData, historicalData } = useMemo(() => {
+	const { latestData } = useMemo(() => {
 		const latestMap = new Map<number, any>();
 		const earliestMap = new Map<number, any>();
 
@@ -61,10 +61,7 @@ function Dashboard() {
 			return { ...latest, growthPercent: growth };
 		});
 
-		return {
-			latestData: latestList,
-			historicalData: Array.from(earliestMap.values())
-		};
+		return { latestData: latestList };
 	}, [dedupedDataToUse]);
 
 	const macroMetrics = useMemo(() => {
@@ -77,39 +74,28 @@ function Dashboard() {
 	}, [platformHistory]);
 
 	const chartData = useMemo(() => {
-		const byDate = new Map<string, { sortKey: number, sumGrowth: number, count: number }>();
-
-		const histMap = new Map();
-		for (const h of historicalData) {
-			histMap.set(h.subredditId, h);
-		}
+		const byDate = new Map<string, { sortKey: number, totalVisitors: number }>();
 
 		for (const row of dedupedDataToUse) {
 			const recordedDate = new Date(row.recordedAt);
 			const dateKey = format(recordedDate, "MMM dd");
 			
 			if (!byDate.has(dateKey)) {
-				byDate.set(dateKey, { sortKey: recordedDate.getTime(), sumGrowth: 0, count: 0 });
+				byDate.set(dateKey, { sortKey: recordedDate.getTime(), totalVisitors: 0 });
 			}
 			
 			const entry = byDate.get(dateKey)!;
 			entry.sortKey = Math.min(entry.sortKey, recordedDate.getTime());
-
-			const hist = histMap.get(row.subredditId);
-			if (hist && hist.weeklyVisitors > 0) {
-				const growth = ((row.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) * 100;
-				entry.sumGrowth += growth;
-				entry.count += 1;
-			}
+			entry.totalVisitors += row.weeklyVisitors;
 		}
 
 		return Array.from(byDate.entries())
 			.sort(([, a], [, b]) => a.sortKey - b.sortKey)
 			.map(([date, stats]) => ({
 				date,
-				"Top 250 Growth": stats.count > 0 ? Number((stats.sumGrowth / stats.count).toFixed(2)) : 0
+				"Total Visitors": stats.totalVisitors
 			}));
-	}, [dedupedDataToUse, historicalData]);
+	}, [dedupedDataToUse]);
 
 	return (
 		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col relative">
