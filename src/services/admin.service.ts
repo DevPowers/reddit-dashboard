@@ -1,6 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "../db/index.server";
-import { cronLogs } from "../db/schema";
+import { cronLogs, platformHistoricalMetrics } from "../db/schema";
 
 export const getAdminStats = async () => {
 	// 1. DB Health Check
@@ -11,10 +11,10 @@ export const getAdminStats = async () => {
 		dbHealth = "Unreachable";
 	}
 
-	// 2. Cron Stats
-	const totalCrons = await db
+	// 2. Cron Stats (Days of Data)
+	const totalDays = await db
 		.select({ count: sql<number>`count(*)::int` })
-		.from(cronLogs);
+		.from(platformHistoricalMetrics);
 		
 	const recentCrons = await db
 		.select()
@@ -29,7 +29,7 @@ export const getAdminStats = async () => {
 
 	return {
 		cronStats: {
-			totalRuns: totalCrons[0]?.count || 0,
+			totalRuns: totalDays[0]?.count || 0,
 			recentRun: recentCrons[0] || null,
 			avgDurationMs: avgDurationResult[0]?.avg || null,
 		},
