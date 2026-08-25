@@ -4,8 +4,7 @@ import { useMemo } from "react";
 import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
 
 // Import new simplified components
-import { TopVisitorTrend } from "../components/dashboard/TopVisitorTrend";
-import { GrowthChart } from "../components/dashboard/GrowthChart";
+import { AggregateTrendCard } from "../components/dashboard/AggregateTrendCard";
 import { TrackedSubredditsIndex } from "../components/dashboard/TrackedSubredditsIndex";
 import { AdminFooter } from "../components/admin/AdminFooter";
 
@@ -36,7 +35,7 @@ function Dashboard() {
 		return Array.from(map.values());
 	}, [serverData]);
 
-	const { latestData, historicalData, baselineDateStr } = useMemo(() => {
+	const { latestData, historicalData } = useMemo(() => {
 		const latestMap = new Map<number, any>();
 		const earliestMap = new Map<number, any>();
 
@@ -53,12 +52,6 @@ function Dashboard() {
 			}
 		}
 
-		let globalEarliest: Date | null = null;
-		for (const row of earliestMap.values()) {
-			const d = new Date(row.recordedAt);
-			if (!globalEarliest || d < globalEarliest) globalEarliest = d;
-		}
-
 		const latestList = Array.from(latestMap.values()).map((latest) => {
 			const hist = earliestMap.get(latest.subredditId);
 			let growth = 0;
@@ -70,17 +63,16 @@ function Dashboard() {
 
 		return {
 			latestData: latestList,
-			historicalData: Array.from(earliestMap.values()),
-			baselineDateStr: globalEarliest ? format(globalEarliest, "MMMM d, yyyy") : "N/A"
+			historicalData: Array.from(earliestMap.values())
 		};
 	}, [dedupedDataToUse]);
 
 	const macroMetrics = useMemo(() => {
 		const latest = platformHistory[platformHistory.length - 1];
-		if (!latest) return { visitorGrowthPercent: 0, netNewVisitors: 0 };
+		if (!latest) return { visitorGrowthPercent: 0, totalWeeklyVisitors: 0 };
 		return {
 			visitorGrowthPercent: latest.visitorGrowthPercent,
-			netNewVisitors: latest.netNewWeeklyVisitors,
+			totalWeeklyVisitors: latest.totalWeeklyVisitors,
 		};
 	}, [platformHistory]);
 
@@ -94,7 +86,7 @@ function Dashboard() {
 
 		for (const row of dedupedDataToUse) {
 			const recordedDate = new Date(row.recordedAt);
-			const dateKey = format(recordedDate, "MMM dd, yyyy");
+			const dateKey = format(recordedDate, "MMM dd");
 			
 			if (!byDate.has(dateKey)) {
 				byDate.set(dateKey, { sortKey: recordedDate.getTime(), sumGrowth: 0, count: 0 });
@@ -120,25 +112,23 @@ function Dashboard() {
 	}, [dedupedDataToUse, historicalData]);
 
 	return (
-		<div className="page-wrap py-10 max-w-7xl mx-auto px-4 min-h-screen flex flex-col">
+		<div className="page-wrap py-10 max-w-[1400px] mx-auto px-4 sm:px-6 min-h-screen flex flex-col">
 			<div className="flex-grow">
-				<div className="flex justify-between items-center mb-8">
-					<div>
-						<h1 className="text-3xl font-extrabold text-text-main tracking-tight">
-							<span className="text-orangered font-black">Reddit</span> Top 250 Tracker
-						</h1>
-						<p className="text-text-muted text-sm mt-1">
-							Tracking the 250 most visited communities on Reddit (Baseline: {baselineDateStr})
-						</p>
-					</div>
+				<div className="mb-10 border-b border-surface-border pb-4">
+					<h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+						Reddit Top 250 Tracker
+					</h1>
 				</div>
 
-				<TopVisitorTrend metrics={macroMetrics} />
-				<div className="mt-8">
-					<GrowthChart data={chartData} />
+				<div className="mb-12">
+					<AggregateTrendCard 
+						totalVisitors={macroMetrics.totalWeeklyVisitors}
+						growthPercent={macroMetrics.visitorGrowthPercent}
+						chartData={chartData}
+					/>
 				</div>
 				
-				<div className="mt-12">
+				<div className="mb-12">
 					<TrackedSubredditsIndex latestData={latestData} allData={dedupedDataToUse} />
 				</div>
 			</div>

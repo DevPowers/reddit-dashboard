@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { SubredditSparkline } from "./SubredditSparkline";
 
 interface SubredditIndexProps {
@@ -10,120 +10,166 @@ interface SubredditIndexProps {
 
 export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexProps) {
 	const [expandedSub, setExpandedSub] = useState<string | null>(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 10;
 
 	const sortedData = useMemo(() => {
-		return [...latestData].sort((a, b) => b.weeklyVisitors - a.weeklyVisitors);
-	}, [latestData]);
+		return [...latestData]
+			.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
+			.sort((a, b) => b.weeklyVisitors - a.weeklyVisitors);
+	}, [latestData, searchQuery]);
+
+	const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+	const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
 	const toggleRow = (subName: string) => {
 		setExpandedSub(expandedSub === subName ? null : subName);
 	};
 
+	const formatNumber = (num: number) => {
+		if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + 'B';
+		if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
+		if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
+		return num.toString();
+	};
+
+	const getAvatarColors = (name: string) => {
+		const colors = [
+			{ bg: "bg-orange-500/20", text: "text-orange-400" },
+			{ bg: "bg-blue-500/20", text: "text-blue-400" },
+			{ bg: "bg-emerald-500/20", text: "text-emerald-400" },
+			{ bg: "bg-purple-500/20", text: "text-purple-400" },
+			{ bg: "bg-pink-500/20", text: "text-pink-400" },
+		];
+		const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+		return colors[hash % colors.length];
+	};
+
 	return (
-		<div className="bg-surface-main border border-surface-border rounded-xl shadow-sm overflow-hidden">
-			<div className="p-6 border-b border-surface-border">
-				<h3 className="text-lg font-bold text-text-main">Tracked Subreddits Data Index</h3>
-				<p className="text-sm text-text-muted mt-1">Detailed visitor growth across the top 250 communities.</p>
+		<div className="w-full">
+			<div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+				<h2 className="text-2xl font-bold text-white tracking-tight">Tracked Subreddits Data Index</h2>
+				<div className="relative mt-4 md:mt-0 w-full md:w-64">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+					<input 
+						type="text" 
+						placeholder="Search subreddits..." 
+						value={searchQuery}
+						onChange={(e) => {
+							setSearchQuery(e.target.value);
+							setCurrentPage(1);
+						}}
+						className="w-full bg-[#161b1d] border border-surface-border rounded-lg py-2 pl-9 pr-4 text-sm text-white placeholder-text-muted focus:outline-none focus:border-text-muted transition-colors"
+					/>
+				</div>
 			</div>
 			
-			<div className="overflow-x-auto">
-				<table className="w-full text-left border-collapse">
-					<thead>
-						<tr className="bg-surface-elevated text-text-muted text-xs uppercase tracking-wider">
-							<th className="py-3 px-6 font-semibold border-b border-surface-border">Community</th>
-							<th className="py-3 px-6 font-semibold border-b border-surface-border text-right">Weekly Visitors</th>
-							<th className="py-3 px-6 font-semibold border-b border-surface-border text-right">Growth (vs Baseline)</th>
-							<th className="py-3 px-6 font-semibold border-b border-surface-border text-center">Status</th>
-							<th className="py-3 px-6 font-semibold border-b border-surface-border w-10"></th>
-						</tr>
-					</thead>
-					<tbody className="text-sm divide-y divide-surface-border">
-						{sortedData.map((sub) => {
-							const isExpanded = expandedSub === sub.name;
-							const isPositive = sub.growthPercent >= 0;
-							
-							const history = allData
-								.filter(d => d.name === sub.name)
-								.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+			<div className="bg-[#161b1d] border border-surface-border rounded-xl shadow-lg overflow-hidden">
+				<div className="overflow-x-auto">
+					<table className="w-full text-left border-collapse whitespace-nowrap">
+						<thead>
+							<tr className="text-xs font-mono tracking-widest uppercase text-text-muted border-b border-surface-border">
+								<th className="py-4 px-6 font-medium">Subreddit</th>
+								<th className="py-4 px-6 font-medium text-center">Daily Avg</th>
+								<th className="py-4 px-6 font-medium text-center">30D Growth</th>
+								<th className="py-4 px-6 font-medium text-right">Status</th>
+							</tr>
+						</thead>
+						<tbody className="text-sm divide-y divide-surface-border">
+							{paginatedData.map((sub) => {
+								const isExpanded = expandedSub === sub.name;
+								const isPositive = sub.growthPercent >= 0;
+								const avatarColors = getAvatarColors(sub.name);
+								
+								const history = allData
+									.filter(d => d.name === sub.name)
+									.sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
 
-							return (
-								<React.Fragment key={sub.name}>
-									<tr 
-										className="hover:bg-surface-elevated/50 transition-colors cursor-pointer group"
-										onClick={() => toggleRow(sub.name)}
-									>
-										<td className="py-4 px-6 font-medium text-text-main">
-											r/{sub.name}
-											{!sub.isActive && <span className="ml-2 text-xs bg-error/10 text-error px-2 py-0.5 rounded-full">Inactive</span>}
-										</td>
-										<td className="py-4 px-6 text-right text-text-main font-mono">
-											{sub.weeklyVisitors.toLocaleString()}
-										</td>
-										<td className={`py-4 px-6 text-right font-medium ${isPositive ? 'text-success' : 'text-error'}`}>
-											{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(2)}%
-										</td>
-										<td className="py-4 px-6 text-center">
-											<span className="inline-flex items-center justify-center bg-success/10 text-success text-xs font-bold px-2 py-1 rounded-full">
-												Active
-											</span>
-										</td>
-										<td className="py-4 px-6 text-right text-text-muted">
-											{isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-										</td>
-									</tr>
-									{isExpanded && (
-										<tr className="bg-obsidian/50 border-t-0">
-											<td colSpan={5} className="py-6 px-6">
-												<div className="max-w-4xl mx-auto">
-													<h4 className="text-sm font-bold text-text-main mb-4">Visitor Growth Over Time</h4>
-													<SubredditSparkline 
-														data={history.map(h => ({
-															date: format(new Date(h.recordedAt), "MMM dd"),
-															weeklyVisitors: h.weeklyVisitors,
-														}))}
-														dataKey="weeklyVisitors"
-														color="var(--color-orangered)"
-													/>
-													
-													<h4 className="text-sm font-bold text-text-main mb-3 mt-8">Raw Data (Last 50 Records)</h4>
-													<div className="bg-surface-main rounded-lg border border-surface-border overflow-hidden">
-														<table className="w-full text-left text-xs">
-															<thead className="bg-surface-elevated border-b border-surface-border text-text-muted uppercase">
-																<tr>
-																	<th className="py-2 px-4">Date Recorded</th>
-																	<th className="py-2 px-4 text-right">Weekly Visitors</th>
-																</tr>
-															</thead>
-															<tbody className="divide-y divide-surface-border">
-																{[...history].reverse().slice(0, 50).map((record, i) => (
-																	<tr key={i} className="hover:bg-surface-elevated/30">
-																		<td className="py-2 px-4 font-mono text-text-muted">
-																			{format(new Date(record.recordedAt), "PPp")}
-																		</td>
-																		<td className="py-2 px-4 text-right font-mono text-text-main">
-																			{record.weeklyVisitors.toLocaleString()}
-																		</td>
-																	</tr>
-																))}
-															</tbody>
-														</table>
-													</div>
+								return (
+									<React.Fragment key={sub.name}>
+										<tr 
+											className="hover:bg-[#1a2124] transition-colors cursor-pointer group"
+											onClick={() => toggleRow(sub.name)}
+										>
+											<td className="py-4 px-6 font-medium text-white flex items-center space-x-4">
+												<div className="text-text-muted">
+													{isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
 												</div>
+												<div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${avatarColors.bg} ${avatarColors.text}`}>
+													{sub.name.charAt(0).toUpperCase()}
+												</div>
+												<span>r/{sub.name}</span>
+											</td>
+											<td className="py-4 px-6 text-center text-white font-mono">
+												{formatNumber(sub.weeklyVisitors / 7)}
+											</td>
+											<td className={`py-4 px-6 text-center font-mono font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%
+											</td>
+											<td className="py-4 px-6 text-right">
+												<span className={`inline-flex items-center justify-center text-xs font-bold px-3 py-1 rounded-full ${
+													sub.isActive 
+													? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+													: 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+												}`}>
+													{sub.isActive ? 'Active' : 'Stale'}
+												</span>
 											</td>
 										</tr>
-									)}
-								</React.Fragment>
-							);
-						})}
-						{sortedData.length === 0 && (
-							<tr>
-								<td colSpan={5} className="py-8 text-center text-text-muted">
-									No subreddit data available.
-								</td>
-							</tr>
-						)}
-					</tbody>
-				</table>
+										{isExpanded && (
+											<tr className="bg-[#121618] border-t-0 shadow-inner">
+												<td colSpan={4} className="py-6 px-6">
+													<div className="max-w-4xl mx-auto">
+														<h4 className="text-sm font-bold text-white mb-4">Visitor Growth Over Time</h4>
+														<SubredditSparkline 
+															data={history.map(h => ({
+																date: format(new Date(h.recordedAt), "MMM dd"),
+																weeklyVisitors: h.weeklyVisitors,
+															}))}
+															dataKey="weeklyVisitors"
+															color={isPositive ? "#10b981" : "#ef4444"}
+														/>
+													</div>
+												</td>
+											</tr>
+										)}
+									</React.Fragment>
+								);
+							})}
+							{paginatedData.length === 0 && (
+								<tr>
+									<td colSpan={4} className="py-12 text-center text-text-muted">
+										No subreddits found matching "{searchQuery}".
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-sm">
+				<div className="text-text-muted font-mono mb-4 sm:mb-0">
+					Showing {sortedData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
+					{Math.min(currentPage * itemsPerPage, sortedData.length)} of {sortedData.length}
+				</div>
+				<div className="flex space-x-2">
+					<button 
+						onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+						disabled={currentPage === 1}
+						className="px-4 py-2 bg-[#161b1d] border border-surface-border text-white rounded-md hover:bg-[#1a2124] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-mono cursor-pointer"
+					>
+						Prev
+					</button>
+					<button 
+						onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+						disabled={currentPage === totalPages || totalPages === 0}
+						className="px-4 py-2 bg-[#161b1d] border border-surface-border text-white rounded-md hover:bg-[#1a2124] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-mono cursor-pointer"
+					>
+						Next
+					</button>
+				</div>
 			</div>
 		</div>
 	);
