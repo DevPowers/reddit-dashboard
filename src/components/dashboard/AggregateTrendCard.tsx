@@ -103,13 +103,7 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 									color: "#fff",
 								}}
 								itemStyle={{ color: "#fff" }}
-								formatter={(value: any) => {
-									const num = Number(value);
-									let formatted = num.toString();
-									if (num >= 1000000) formatted = (num / 1000000).toFixed(1) + 'M';
-									else if (num >= 1000) formatted = (num / 1000).toFixed(1) + 'K';
-									return [formatted, "Total Visitors"];
-								}}
+								formatter={(value: any) => [Number(value).toLocaleString(), "Total Visitors"]}
 							/>
 							<Area
 								type="monotone"
