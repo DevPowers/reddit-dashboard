@@ -110,6 +110,7 @@ function Dashboard() {
 				<PortfolioChanges 
 					additions={portfolioChanges.additions} 
 					drops={portfolioChanges.drops} 
+					latestScrapeDate={portfolioChanges.latestScrapeDate}
 				/>
 
 				<div className="mb-12">

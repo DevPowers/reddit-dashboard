@@ -1,57 +1,64 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { calculateAndSaveMacroMetrics } from '../../src/functions/macro';
-import { db } from '../../src/db/index.server';
+import { describe, it, expect, vi } from "vitest";
 
-// Mock DB
-vi.mock('../../src/db/index.server', () => ({
+// Mock the dependencies FIRST
+vi.mock("../../src/db/index.server", () => ({
   db: {
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
+    select: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([{ id: 1 }])
   }
 }));
 
-describe('calculateAndSaveMacroMetrics', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+import { calculateAndSaveMacroMetrics } from "../../src/functions/macro";
+import { db } from "../../src/db/index.server";
 
-  it('should calculate metrics and insert them', async () => {
-    // Mock the initial select for metrics history
-    const mockData = [
-      { id: 1, subredditId: 1, weeklyVisitors: 100, recordedAt: new Date('2026-08-01') },
-      { id: 2, subredditId: 1, weeklyVisitors: 150, recordedAt: new Date('2026-08-10') },
-    ];
-    
-    // Setup chaining for the complex db.select().from().innerJoin().where()
-    const mockWhere = vi.fn().mockResolvedValue(mockData);
-    const mockInnerJoin = vi.fn().mockReturnValue({ where: mockWhere });
-    const mockFrom = vi.fn().mockReturnValue({ innerJoin: mockInnerJoin });
-    (db.select as any).mockReturnValue({ from: mockFrom });
+describe("Macro Metrics Calculations", () => {
+    it("should calculate statistical metrics perfectly", async () => {
+        // We will mock the returned data
+        const mockData = [
+            { id: 1, subredditId: 1, weeklyVisitors: 100, recordedAt: new Date("2026-08-25T00:00:00Z") },
+            { id: 2, subredditId: 2, weeklyVisitors: 200, recordedAt: new Date("2026-08-25T00:00:00Z") },
+            { id: 3, subredditId: 3, weeklyVisitors: 300, recordedAt: new Date("2026-08-25T00:00:00Z") },
+            { id: 4, subredditId: 4, weeklyVisitors: 400, recordedAt: new Date("2026-08-25T00:00:00Z") },
+            { id: 5, subredditId: 5, weeklyVisitors: 500, recordedAt: new Date("2026-08-25T00:00:00Z") },
+        ];
+        
+        const mockGenesis = [
+            { totalWeeklyVisitors: 1000 }
+        ];
 
-    // Mock existing today check
-    const mockLimit = vi.fn().mockResolvedValue([]);
-    const mockWhere2 = vi.fn().mockReturnValue({ limit: mockLimit });
-    const mockFrom2 = vi.fn().mockReturnValue({ where: mockWhere2 });
-    
-    // Override the 2nd select call for platformHistoricalMetrics
-    (db.select as any).mockImplementation(() => {
-      // Very naive implementation just to pass execution
-      let callCount = (db.select as any).mock.calls.length;
-      if (callCount === 1) {
-        return { from: mockFrom };
-      }
-      return { from: mockFrom2 };
+        // Override db behavior for this test
+        // @ts-ignore
+        (db.where as any)
+            .mockResolvedValueOnce(mockData) 
+            .mockReturnThis(); 
+            
+        // @ts-ignore
+        (db.limit as any)
+            .mockResolvedValueOnce(mockGenesis) 
+            .mockResolvedValueOnce([]) 
+            .mockResolvedValue([{ id: 1 }]); 
+
+        await calculateAndSaveMacroMetrics();
+        expect(db.insert).toHaveBeenCalled();
+        
+        // @ts-ignore
+        const valuesCall = (db.values as any).mock.calls[0][0];
+        
+        expect(valuesCall.totalWeeklyVisitors).toBe(1500);
+        expect(valuesCall.minVisitors).toBe(100);
+        expect(valuesCall.maxVisitors).toBe(500);
+        expect(valuesCall.medianVisitors).toBe(300);
+        expect(valuesCall.averageVisitors).toBe(300); // 1500 / 5
+        expect(valuesCall.visitorGrowthPercent).toBe(50); // (1500 - 1000) / 1000 * 100
+        expect(valuesCall.netNewWeeklyVisitors).toBe(500);
     });
-
-    const mockReturning = vi.fn().mockResolvedValue([{ id: 1, totalWeeklyVisitors: 150 }]);
-    const mockValues = vi.fn().mockReturnValue({ returning: mockReturning });
-    (db.insert as any).mockReturnValue({ values: mockValues });
-
-    const result = await calculateAndSaveMacroMetrics();
-
-    expect(db.select).toHaveBeenCalled();
-    expect(db.insert).toHaveBeenCalled();
-    expect(result).toEqual({ id: 1, totalWeeklyVisitors: 150 });
-  });
 });

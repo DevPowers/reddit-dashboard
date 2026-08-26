@@ -4,9 +4,10 @@ import { ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
 interface PortfolioChangesProps {
 	additions: any[];
 	drops: any[];
+	latestScrapeDate?: Date | string;
 }
 
-export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
+export function PortfolioChanges({ additions, drops, latestScrapeDate }: PortfolioChangesProps) {
 	if (additions.length === 0 && drops.length === 0) {
 		return null;
 	}
@@ -49,7 +50,7 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 									<div>
 										<p className="text-white font-semibold tracking-wide">r/{sub.name}</p>
 										<p className="text-xs text-zinc-400 mt-0.5">
-											Added {format(new Date(sub.createdAt), "MMM d, yyyy")}
+											Added {format(new Date(latestScrapeDate || sub.createdAt), "MMM d, yyyy")}
 										</p>
 									</div>
 								</div>
@@ -95,7 +96,7 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 									<div>
 										<p className="text-zinc-200 font-semibold tracking-wide">r/{sub.name}</p>
 										<p className="text-xs text-zinc-400 mt-0.5">
-											Dropped {format(new Date(sub.lastSeenAt), "MMM d, yyyy")}
+											Dropped {format(new Date(latestScrapeDate || sub.lastSeenAt), "MMM d, yyyy")}
 										</p>
 									</div>
 								</div>

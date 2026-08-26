@@ -114,6 +114,15 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 			.orderBy(desc(subreddits.lastSeenAt))
 			.limit(10);
 
-		return { additions, drops };
+		// 4. Determine the exact timestamp of the most recent successful scrape
+		const latestMetric = await db
+			.select({ recordedAt: platformHistoricalMetrics.recordedAt })
+			.from(platformHistoricalMetrics)
+			.orderBy(desc(platformHistoricalMetrics.recordedAt))
+			.limit(1);
+			
+		const latestScrapeDate = latestMetric[0]?.recordedAt || new Date().toISOString();
+
+		return { additions, drops, latestScrapeDate };
 	}
 );
