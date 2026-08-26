@@ -5,6 +5,7 @@ import {
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
+	YAxis,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -79,6 +80,7 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 								vertical={false}
 								stroke="rgba(255,255,255,0.05)"
 							/>
+							<YAxis hide domain={['dataMin', 'dataMax']} padding={{ top: 20, bottom: 0 }} />
 							<XAxis
 								dataKey="date"
 								axisLine={false}

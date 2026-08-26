@@ -1,4 +1,4 @@
-import { LineChart, Line, ResponsiveContainer, XAxis, Tooltip, CartesianGrid } from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 interface Props {
 	data: any[];
@@ -26,6 +26,7 @@ export function SubredditSparkline({ data, dataKey, color }: Props) {
 			<ResponsiveContainer width="100%" height="100%">
 				<LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
 					<CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
+					<YAxis hide domain={['dataMin', 'dataMax']} padding={{ top: 20, bottom: 0 }} />
 					<XAxis dataKey="date" hide />
 					<Tooltip
 						contentStyle={{
