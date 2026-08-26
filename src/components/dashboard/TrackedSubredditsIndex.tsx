@@ -96,7 +96,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 												{formatNumber(sub.weeklyVisitors)}
 											</td>
 											<td className={`py-4 px-6 text-right font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%
+												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(2)}%
 											</td>
 										</tr>
 										{isExpanded && (
@@ -108,7 +108,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 																<h4 className="text-sm font-bold text-white mb-1">Visitor Growth Over Time</h4>
 																{history.length > 0 && (
 																	<p className="text-xs text-zinc-400">
-																		Net Change: <span className={isPositive ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(1)}%</span> since {format(new Date(history[0].recordedAt), "MMM d, yyyy")}
+																		Net Change: <span className={isPositive ? "text-emerald-400 font-medium" : "text-red-400 font-medium"}>{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(2)}%</span> since {format(new Date(history[0].recordedAt), "MMM d, yyyy")}
 																	</p>
 																)}
 															</div>

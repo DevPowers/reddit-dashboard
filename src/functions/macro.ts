@@ -4,7 +4,7 @@ import {
 	subreddits,
 	platformHistoricalMetrics,
 } from "../db/schema";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, sql } from "drizzle-orm";
 
 export const calculateAndSaveMacroMetrics = async () => {
 	const data = await db
@@ -60,32 +60,32 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 
 	let totalLatestReach = 0;
-	let growthNumeratorLatestReach = 0;
-	let growthDenominatorBaselineReach = 0;
-
 	for (const sub of latestData) {
-		const reach = sub.weeklyVisitors;
-		totalLatestReach += reach;
-
-		const subHistory = dataBySubreddit.get(sub.subredditId) || [];
-		const baseline = baselineMap.get(sub.subredditId);
-
-		const distinctDates = new Set(
-			subHistory.map((r) => new Date(r.recordedAt).toISOString().slice(0, 10))
-		);
-
-		if (distinctDates.size >= 2 && baseline) {
-			const baselineReach = baseline.weeklyVisitors;
-			growthDenominatorBaselineReach += baselineReach;
-			growthNumeratorLatestReach += reach;
-		}
+		totalLatestReach += sub.weeklyVisitors;
 	}
 
-	const overallGrowthPercent =
-		growthDenominatorBaselineReach > 0
-			? ((growthNumeratorLatestReach - growthDenominatorBaselineReach) / growthDenominatorBaselineReach) * 100
+	const todayStart = new Date();
+	todayStart.setUTCHours(0, 0, 0, 0);
+
+	// Calculate growth strictly against the last saved macro snapshot
+	const previousMetrics = await db
+		.select()
+		.from(platformHistoricalMetrics)
+		.orderBy(sql`${platformHistoricalMetrics.recordedAt} DESC`)
+		.limit(2); 
+
+	let overallGrowthPercent = 0;
+	let overallNetNewReach = 0;
+
+	// If we have a previous record that isn't today's record
+	const prevRecord = previousMetrics.find(m => new Date(m.recordedAt) < todayStart);
+	
+	if (prevRecord) {
+		overallNetNewReach = totalLatestReach - prevRecord.totalWeeklyVisitors;
+		overallGrowthPercent = prevRecord.totalWeeklyVisitors > 0 
+			? (overallNetNewReach / prevRecord.totalWeeklyVisitors) * 100 
 			: 0;
-	const overallNetNewReach = growthNumeratorLatestReach - growthDenominatorBaselineReach;
+	}
 
 	// --- Statistical Metrics ---
 	const sortedLatest = [...latestData].sort((a, b) => a.weeklyVisitors - b.weeklyVisitors);
@@ -115,8 +115,7 @@ export const calculateAndSaveMacroMetrics = async () => {
 	}
 	// ---------------------------
 
-	const todayStart = new Date();
-	todayStart.setUTCHours(0, 0, 0, 0);
+
 
 	const existingToday = await db
 		.select()

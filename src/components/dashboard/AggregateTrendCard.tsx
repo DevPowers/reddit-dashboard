@@ -48,7 +48,7 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 						isPositive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
 					}`}>
 						{isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-						<span>{isPositive ? "+" : ""}{growthPercent.toFixed(1)}%</span>
+						<span>{isPositive ? "+" : ""}{growthPercent.toFixed(2)}%</span>
 					</div>
 				</div>
 			</div>

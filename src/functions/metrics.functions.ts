@@ -69,7 +69,7 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 		if (!earliestSub[0]) return { additions: [], drops: [] };
 
 		const genesisDate = new Date(earliestSub[0].createdAt);
-		genesisDate.setHours(genesisDate.getHours() + 48); // 48 hours buffer
+		genesisDate.setHours(genesisDate.getHours() + 1); // 1 hour buffer to ignore initial seed
 
 		// 2. Fetch Recent Additions (isActive = true, createdAt > genesisDate)
 		const additions = await db
@@ -82,9 +82,9 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 			.from(subreddits)
 			.leftJoin(
 				metricsHistory,
-				sql`${metricsHistory.id} = (
+				sql`metrics_history.id = (
 					SELECT id FROM metrics_history 
-					WHERE subreddit_id = ${subreddits.id} 
+					WHERE subreddit_id = subreddits.id 
 					ORDER BY recorded_at DESC LIMIT 1
 				)`
 			)
@@ -104,13 +104,13 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 			.from(subreddits)
 			.leftJoin(
 				metricsHistory,
-				sql`${metricsHistory.id} = (
+				sql`metrics_history.id = (
 					SELECT id FROM metrics_history 
-					WHERE subreddit_id = ${subreddits.id} 
+					WHERE subreddit_id = subreddits.id 
 					ORDER BY recorded_at DESC LIMIT 1
 				)`
 			)
-			.where(and(eq(subreddits.isActive, false), gt(subreddits.lastSeenAt, genesisDate)))
+			.where(eq(subreddits.isActive, false))
 			.orderBy(desc(subreddits.lastSeenAt))
 			.limit(10);
 
