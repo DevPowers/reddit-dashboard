@@ -110,7 +110,7 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 					ORDER BY recorded_at DESC LIMIT 1
 				)`
 			)
-			.where(eq(subreddits.isActive, false))
+			.where(and(eq(subreddits.isActive, false), gt(subreddits.lastSeenAt, genesisDate)))
 			.orderBy(desc(subreddits.lastSeenAt))
 			.limit(10);
 
