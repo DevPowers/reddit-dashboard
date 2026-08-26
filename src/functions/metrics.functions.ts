@@ -20,7 +20,8 @@ export const getMetrics = createServerFn({ method: "GET" }).handler(
 				recordedAt: metricsHistory.recordedAt,
 			})
 			.from(metricsHistory)
-			.innerJoin(subreddits, eq(metricsHistory.subredditId, subreddits.id));
+			.innerJoin(subreddits, eq(metricsHistory.subredditId, subreddits.id))
+			.where(eq(subreddits.isActive, true));
 
 		return data;
 	},
