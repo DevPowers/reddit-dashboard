@@ -94,6 +94,7 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 								tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
 								tickMargin={12}
 								minTickGap={50}
+								padding={{ left: 20, right: 30 }}
 							/>
 							<Tooltip
 								contentStyle={{
@@ -105,8 +106,11 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 								itemStyle={{ color: "#fff" }}
 								formatter={(value: any) => {
 									const num = Number(value);
-									const rounded = num >= 1000 ? Math.round(num / 1000) * 1000 : num;
-									return [rounded.toLocaleString(), "Total Visitors"];
+									let formatted = num.toLocaleString();
+									if (num >= 1_000_000_000) formatted = parseFloat((num / 1_000_000_000).toFixed(3)) + 'B';
+									else if (num >= 1_000_000) formatted = parseFloat((num / 1_000_000).toFixed(3)) + 'M';
+									else if (num >= 1_000) formatted = parseFloat((num / 1_000).toFixed(1)) + 'K';
+									return [formatted, "Total Visitors"];
 								}}
 							/>
 							<Area

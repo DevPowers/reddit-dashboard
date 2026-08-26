@@ -147,6 +147,7 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 											tickLine={false}
 											tick={{ fill: "#6b7280", fontSize: 12, fontFamily: "monospace" }}
 											tickMargin={12}
+											padding={{ left: 20, right: 30 }}
 										/>
 										<Tooltip
 											contentStyle={{
@@ -159,8 +160,11 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 											formatter={(value: any) => {
 												if (activeMetric.isPercentage) return [`${Number(value).toFixed(1)}%`, activeMetric.dataKey];
 												const num = Number(value);
-												const rounded = num >= 1000 ? Math.round(num / 1000) * 1000 : num;
-												return [rounded.toLocaleString(), activeMetric.dataKey];
+												let formatted = num.toLocaleString();
+												if (num >= 1_000_000_000) formatted = parseFloat((num / 1_000_000_000).toFixed(3)) + 'B';
+												else if (num >= 1_000_000) formatted = parseFloat((num / 1_000_000).toFixed(3)) + 'M';
+												else if (num >= 1_000) formatted = parseFloat((num / 1_000).toFixed(1)) + 'K';
+												return [formatted, activeMetric.dataKey];
 											}}
 										/>
 										<Area

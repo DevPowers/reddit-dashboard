@@ -9,13 +9,20 @@ interface Props {
 export function SubredditSparkline({ data, dataKey, color }: Props) {
 	if (!data || data.length === 0) return null;
 	
+	const formatDetailed = (num: number) => {
+		if (num >= 1_000_000_000) return parseFloat((num / 1_000_000_000).toFixed(3)) + 'B';
+		if (num >= 1_000_000) return parseFloat((num / 1_000_000).toFixed(3)) + 'M';
+		if (num >= 1_000) return parseFloat((num / 1_000).toFixed(1)) + 'K';
+		return num.toLocaleString();
+	};
+
 	if (data.length === 1) {
 		return (
 			<div className="h-[200px] w-full flex flex-col items-center justify-center border border-dashed border-white/10 rounded-lg bg-[#161b1d]/50">
 				<div className="w-2 h-2 rounded-full mb-3" style={{ backgroundColor: color }} />
 				<p className="text-zinc-400 text-sm font-medium">Insufficient Data</p>
 				<p className="text-zinc-500 text-xs mt-1 max-w-[250px] text-center">
-					Check back tomorrow for trend lines. Currently tracking {(data[0][dataKey] >= 1000 ? Math.round(data[0][dataKey] / 1000) * 1000 : data[0][dataKey]).toLocaleString()} visitors.
+					Check back tomorrow for trend lines. Currently tracking {formatDetailed(data[0][dataKey])} visitors.
 				</p>
 			</div>
 		);
@@ -36,11 +43,7 @@ export function SubredditSparkline({ data, dataKey, color }: Props) {
 							color: "#fff",
 						}}
 						itemStyle={{ color: "#fff" }}
-						formatter={(value: any) => {
-							const num = Number(value);
-							const rounded = num >= 1000 ? Math.round(num / 1000) * 1000 : num;
-							return [rounded.toLocaleString(), "Visitors"];
-						}}
+						formatter={(value: any) => [formatDetailed(Number(value)), "Visitors"]}
 					/>
 					<Line
 						type="monotone"
