@@ -20,34 +20,44 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
 			{/* Additions Panel */}
-			<div className="bg-[#161b1d] border border-white/10 rounded-xl p-6">
-				<div className="flex items-center gap-2 mb-6">
-					<div className="bg-success/10 p-2 rounded-full">
-						<ArrowUpRight className="w-5 h-5 text-success" />
+			<div className="bg-gradient-to-b from-[#161b1d] to-[#121618] border border-white/10 border-t-2 border-t-success/60 rounded-xl p-6 shadow-lg shadow-success/5 relative overflow-hidden">
+				<div className="absolute top-0 left-0 w-full h-32 bg-success/5 blur-3xl pointer-events-none" />
+				
+				<div className="flex items-center gap-3 mb-6 relative z-10">
+					<div className="bg-success/15 p-2.5 rounded-xl border border-success/20">
+						<ArrowUpRight className="w-5 h-5 text-success" strokeWidth={2.5} />
 					</div>
-					<h2 className="text-xl font-bold text-white">Recent Additions</h2>
+					<div>
+						<h2 className="text-xl font-bold text-white tracking-tight">Recent Additions</h2>
+						<p className="text-xs text-zinc-400 mt-0.5">New communities entering the Top 250</p>
+					</div>
 				</div>
 
 				{additions.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-8 text-zinc-500">
-						<Clock className="w-8 h-8 mb-2 opacity-50" />
-						<p className="text-sm">No new subreddits added recently.</p>
+					<div className="flex flex-col items-center justify-center py-12 text-zinc-500 bg-black/20 rounded-xl border border-white/5">
+						<Clock className="w-8 h-8 mb-3 opacity-40" />
+						<p className="text-sm font-medium">No new subreddits added recently.</p>
 					</div>
 				) : (
-					<div className="space-y-4">
+					<div className="space-y-3 relative z-10">
 						{additions.map((sub) => (
-							<div key={sub.id} className="flex justify-between items-center p-4 rounded-lg bg-white/5 border border-white/5">
-								<div>
-									<p className="text-white font-medium">{sub.name}</p>
-									<p className="text-xs text-zinc-400 mt-1">
-										Added {format(new Date(sub.createdAt), "MMM d, yyyy")}
-									</p>
+							<div key={sub.id} className="group flex justify-between items-center p-4 rounded-xl bg-[#1a2124]/60 hover:bg-[#1a2124] border border-white/5 border-l-4 border-l-success/80 transition-all">
+								<div className="flex items-center gap-3">
+									<div className="w-8 h-8 rounded-full bg-success/10 text-success font-bold flex items-center justify-center text-sm border border-success/20">
+										{sub.name.charAt(0).toUpperCase()}
+									</div>
+									<div>
+										<p className="text-white font-semibold tracking-wide">r/{sub.name}</p>
+										<p className="text-xs text-zinc-400 mt-0.5">
+											Added {format(new Date(sub.createdAt), "MMM d, yyyy")}
+										</p>
+									</div>
 								</div>
 								<div className="text-right">
-									<p className="text-success font-bold text-lg">
+									<p className="text-success font-black text-lg tracking-tight">
 										{sub.visitors ? formatNumber(sub.visitors) : "N/A"}
 									</p>
-									<p className="text-xs text-zinc-500">Weekly Visitors</p>
+									<p className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Weekly Visitors</p>
 								</div>
 							</div>
 						))}
@@ -56,34 +66,44 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 			</div>
 
 			{/* Drops Panel */}
-			<div className="bg-[#161b1d] border border-white/10 rounded-xl p-6">
-				<div className="flex items-center gap-2 mb-6">
-					<div className="bg-error/10 p-2 rounded-full">
-						<ArrowDownRight className="w-5 h-5 text-error" />
+			<div className="bg-gradient-to-b from-[#161b1d] to-[#121618] border border-white/10 border-t-2 border-t-error/60 rounded-xl p-6 shadow-lg shadow-error/5 relative overflow-hidden">
+				<div className="absolute top-0 left-0 w-full h-32 bg-error/5 blur-3xl pointer-events-none" />
+				
+				<div className="flex items-center gap-3 mb-6 relative z-10">
+					<div className="bg-error/15 p-2.5 rounded-xl border border-error/20">
+						<ArrowDownRight className="w-5 h-5 text-error" strokeWidth={2.5} />
 					</div>
-					<h2 className="text-xl font-bold text-white">Recent Drops</h2>
+					<div>
+						<h2 className="text-xl font-bold text-white tracking-tight">Recent Drops</h2>
+						<p className="text-xs text-zinc-400 mt-0.5">Communities that fell out of the Top 250</p>
+					</div>
 				</div>
 
 				{drops.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-8 text-zinc-500">
-						<Clock className="w-8 h-8 mb-2 opacity-50" />
-						<p className="text-sm">No subreddits dropped recently.</p>
+					<div className="flex flex-col items-center justify-center py-12 text-zinc-500 bg-black/20 rounded-xl border border-white/5">
+						<Clock className="w-8 h-8 mb-3 opacity-40" />
+						<p className="text-sm font-medium">No subreddits dropped recently.</p>
 					</div>
 				) : (
-					<div className="space-y-4">
+					<div className="space-y-3 relative z-10">
 						{drops.map((sub) => (
-							<div key={sub.id} className="flex justify-between items-center p-4 rounded-lg bg-white/5 border border-white/5">
-								<div>
-									<p className="text-zinc-300 font-medium line-through decoration-error/50">{sub.name}</p>
-									<p className="text-xs text-zinc-400 mt-1">
-										Dropped {format(new Date(sub.lastSeenAt), "MMM d, yyyy")}
-									</p>
+							<div key={sub.id} className="group flex justify-between items-center p-4 rounded-xl bg-[#1a2124]/60 hover:bg-[#1a2124] border border-white/5 border-l-4 border-l-error/80 transition-all">
+								<div className="flex items-center gap-3 opacity-70 group-hover:opacity-100 transition-opacity">
+									<div className="w-8 h-8 rounded-full bg-error/10 text-error font-bold flex items-center justify-center text-sm border border-error/20">
+										{sub.name.charAt(0).toUpperCase()}
+									</div>
+									<div>
+										<p className="text-zinc-200 font-semibold tracking-wide">r/{sub.name}</p>
+										<p className="text-xs text-zinc-400 mt-0.5">
+											Dropped {format(new Date(sub.lastSeenAt), "MMM d, yyyy")}
+										</p>
+									</div>
 								</div>
-								<div className="text-right opacity-75">
-									<p className="text-zinc-300 font-bold text-lg">
+								<div className="text-right">
+									<p className="text-error font-black text-lg tracking-tight">
 										{sub.visitors ? formatNumber(sub.visitors) : "N/A"}
 									</p>
-									<p className="text-xs text-zinc-500">Final Weekly Visitors</p>
+									<p className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Final Weekly Visitors</p>
 								</div>
 							</div>
 						))}
