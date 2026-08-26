@@ -224,9 +224,10 @@ export const runScrapeCycle = async () => {
 				name: sub.name,
 				isActive: true,
 				consecutiveFailures: 0,
+				lastSeenAt: currentTime,
 			}).onConflictDoUpdate({
 				target: subreddits.name,
-				set: { isActive: true, consecutiveFailures: 0 }
+				set: { isActive: true, consecutiveFailures: 0, lastSeenAt: currentTime }
 			}).returning({ id: subreddits.id });
 			
 			const dbId = inserted[0].id;

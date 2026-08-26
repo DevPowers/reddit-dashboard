@@ -1,28 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { useMemo } from "react";
-import { getMetrics, getPlatformHistory } from "../functions/metrics.functions";
+
 
 // Import new simplified components
 import { AggregateTrendCard } from "../components/dashboard/AggregateTrendCard";
 import { TrackedSubredditsIndex } from "../components/dashboard/TrackedSubredditsIndex";
 import { MacroMetricsGrid } from "../components/dashboard/MacroMetricsGrid";
+import { PortfolioChanges } from "../components/dashboard/PortfolioChanges";
 import { AdminFooter } from "../components/admin/AdminFooter";
 
 export const Route = createFileRoute("/")({
-	component: Dashboard,
 	loader: async () => {
-		const [metrics, platformHistory] = await Promise.all([
-			getMetrics(),
-			getPlatformHistory()
-		]);
-		return { metrics, platformHistory };
+		const { getMetrics, getPlatformHistory, getPortfolioChanges } = await import(
+			"../functions/metrics.functions"
+		);
+		const metrics = await getMetrics();
+		const platformHistory = await getPlatformHistory();
+		const portfolioChanges = await getPortfolioChanges();
+		return { metrics, platformHistory, portfolioChanges };
 	},
-	staleTime: 60_000,
+	component: Dashboard,
 });
 
 function Dashboard() {
-	const { metrics: serverData, platformHistory } = Route.useLoaderData();
+	const { metrics: serverData, platformHistory, portfolioChanges } = Route.useLoaderData();
 
 	// Deduplicate overlapping subreddits on the client side
 	const dedupedDataToUse = useMemo(() => {
@@ -105,6 +107,11 @@ function Dashboard() {
 
 				<MacroMetricsGrid platformHistory={platformHistory} />
 				
+				<PortfolioChanges 
+					additions={portfolioChanges.additions} 
+					drops={portfolioChanges.drops} 
+				/>
+
 				<div className="mb-12">
 					<TrackedSubredditsIndex latestData={latestData} allData={dedupedDataToUse} />
 				</div>

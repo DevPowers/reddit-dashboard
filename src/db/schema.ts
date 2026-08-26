@@ -18,6 +18,9 @@ export const subreddits = pgTable("subreddits", {
 	createdAt: timestamp("created_at", { withTimezone: true })
 		.defaultNow()
 		.notNull(),
+	lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
 }).enableRLS();
 
 export const subredditsRelations = relations(subreddits, ({ many }) => ({

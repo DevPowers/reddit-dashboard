@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, asc, desc, sql, and, gt } from "drizzle-orm";
 import { db } from "../db/index.server";
 import {
 	metricsHistory,
@@ -55,4 +55,65 @@ export const getPlatformHistory = createServerFn({ method: "GET" }).handler(
 
 		return history;
 	},
+);
+
+export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
+	async () => {
+		// 1. Establish Genesis Date
+		const earliestSub = await db
+			.select()
+			.from(subreddits)
+			.orderBy(asc(subreddits.createdAt))
+			.limit(1);
+
+		if (!earliestSub[0]) return { additions: [], drops: [] };
+
+		const genesisDate = new Date(earliestSub[0].createdAt);
+		genesisDate.setHours(genesisDate.getHours() + 48); // 48 hours buffer
+
+		// 2. Fetch Recent Additions (isActive = true, createdAt > genesisDate)
+		const additions = await db
+			.select({
+				id: subreddits.id,
+				name: subreddits.name,
+				createdAt: subreddits.createdAt,
+				visitors: metricsHistory.weeklyVisitors,
+			})
+			.from(subreddits)
+			.leftJoin(
+				metricsHistory,
+				sql`${metricsHistory.id} = (
+					SELECT id FROM metrics_history 
+					WHERE subreddit_id = ${subreddits.id} 
+					ORDER BY recorded_at DESC LIMIT 1
+				)`
+			)
+			.where(and(eq(subreddits.isActive, true), gt(subreddits.createdAt, genesisDate)))
+			.orderBy(desc(subreddits.createdAt))
+			.limit(10);
+
+		// 3. Fetch Recent Drops (isActive = false)
+		const drops = await db
+			.select({
+				id: subreddits.id,
+				name: subreddits.name,
+				createdAt: subreddits.createdAt,
+				lastSeenAt: subreddits.lastSeenAt,
+				visitors: metricsHistory.weeklyVisitors,
+			})
+			.from(subreddits)
+			.leftJoin(
+				metricsHistory,
+				sql`${metricsHistory.id} = (
+					SELECT id FROM metrics_history 
+					WHERE subreddit_id = ${subreddits.id} 
+					ORDER BY recorded_at DESC LIMIT 1
+				)`
+			)
+			.where(eq(subreddits.isActive, false))
+			.orderBy(desc(subreddits.lastSeenAt))
+			.limit(10);
+
+		return { additions, drops };
+	}
 );
