@@ -55,7 +55,9 @@ function Dashboard() {
 			}
 		}
 
-		const latestList = Array.from(latestMap.values()).map((latest) => {
+		const latestList = Array.from(latestMap.values())
+			.filter((latest) => latest.isActive === true)
+			.map((latest) => {
 			const hist = earliestMap.get(latest.subredditId);
 			let growth = 0;
 			if (hist && hist.weeklyVisitors > 0) {
