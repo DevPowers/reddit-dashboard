@@ -15,7 +15,7 @@ export function SubredditSparkline({ data, dataKey, color }: Props) {
 				<div className="w-2 h-2 rounded-full mb-3" style={{ backgroundColor: color }} />
 				<p className="text-zinc-400 text-sm font-medium">Insufficient Data</p>
 				<p className="text-zinc-500 text-xs mt-1 max-w-[250px] text-center">
-					Check back tomorrow for trend lines. Currently tracking {data[0][dataKey].toLocaleString()} visitors.
+					Check back tomorrow for trend lines. Currently tracking {(data[0][dataKey] >= 1000 ? Math.round(data[0][dataKey] / 1000) * 1000 : data[0][dataKey]).toLocaleString()} visitors.
 				</p>
 			</div>
 		);
@@ -36,7 +36,11 @@ export function SubredditSparkline({ data, dataKey, color }: Props) {
 							color: "#fff",
 						}}
 						itemStyle={{ color: "#fff" }}
-						formatter={(value: any) => [Number(value).toLocaleString(), "Visitors"]}
+						formatter={(value: any) => {
+							const num = Number(value);
+							const rounded = num >= 1000 ? Math.round(num / 1000) * 1000 : num;
+							return [rounded.toLocaleString(), "Visitors"];
+						}}
 					/>
 					<Line
 						type="monotone"

@@ -158,7 +158,9 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 											itemStyle={{ color: "#fff" }}
 											formatter={(value: any) => {
 												if (activeMetric.isPercentage) return [`${Number(value).toFixed(1)}%`, activeMetric.dataKey];
-												return [Number(value).toLocaleString(), activeMetric.dataKey];
+												const num = Number(value);
+												const rounded = num >= 1000 ? Math.round(num / 1000) * 1000 : num;
+												return [rounded.toLocaleString(), activeMetric.dataKey];
 											}}
 										/>
 										<Area
