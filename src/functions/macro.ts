@@ -67,23 +67,21 @@ export const calculateAndSaveMacroMetrics = async () => {
 	const todayStart = new Date();
 	todayStart.setUTCHours(0, 0, 0, 0);
 
-	// Calculate growth strictly against the last saved macro snapshot
-	const previousMetrics = await db
+	// Calculate growth strictly against the first ever recorded macro snapshot (Genesis)
+	const genesisMetrics = await db
 		.select()
 		.from(platformHistoricalMetrics)
-		.orderBy(sql`${platformHistoricalMetrics.recordedAt} DESC`)
-		.limit(2); 
+		.orderBy(sql`${platformHistoricalMetrics.recordedAt} ASC`)
+		.limit(1); 
 
 	let overallGrowthPercent = 0;
 	let overallNetNewReach = 0;
 
-	// If we have a previous record that isn't today's record
-	const prevRecord = previousMetrics.find(m => new Date(m.recordedAt) < todayStart);
-	
-	if (prevRecord) {
-		overallNetNewReach = totalLatestReach - prevRecord.totalWeeklyVisitors;
-		overallGrowthPercent = prevRecord.totalWeeklyVisitors > 0 
-			? (overallNetNewReach / prevRecord.totalWeeklyVisitors) * 100 
+	if (genesisMetrics.length > 0) {
+		const baseline = genesisMetrics[0];
+		overallNetNewReach = totalLatestReach - baseline.totalWeeklyVisitors;
+		overallGrowthPercent = baseline.totalWeeklyVisitors > 0 
+			? (overallNetNewReach / baseline.totalWeeklyVisitors) * 100 
 			: 0;
 	}
 
