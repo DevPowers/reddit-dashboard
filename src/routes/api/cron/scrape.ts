@@ -219,26 +219,36 @@ export const runScrapeCycle = async () => {
 		const currentTime = sql`${getEasternTimeISO()}`;
 
 		// 2. Upsert the 250 subreddits and mark active
-		for (const sub of parsedSubreddits) {
-			const inserted = await db.insert(subreddits).values({
-				name: sub.name,
-				isActive: true,
-				consecutiveFailures: 0,
-				lastSeenAt: currentTime,
-			}).onConflictDoUpdate({
+		const subredditsToInsert = parsedSubreddits.map(sub => ({
+			name: sub.name,
+			isActive: true,
+			consecutiveFailures: 0,
+			lastSeenAt: currentTime,
+		}));
+
+		const upsertedSubreddits = await db
+			.insert(subreddits)
+			.values(subredditsToInsert)
+			.onConflictDoUpdate({
 				target: subreddits.name,
 				set: { isActive: true, consecutiveFailures: 0, lastSeenAt: currentTime }
-			}).returning({ id: subreddits.id });
-			
-			const dbId = inserted[0].id;
-			
-			// 3. Insert into metricsHistory
-			await db.insert(metricsHistory).values({
-				subredditId: dbId,
-				weeklyVisitors: sub.weeklyVisitors,
-				recordedAt: currentTime,
-			});
+			})
+			.returning({ id: subreddits.id, name: subreddits.name });
+
+		// Map returned IDs to their weekly visitors
+		const nameToIdMap = new Map<string, number>();
+		for (const row of upsertedSubreddits) {
+			nameToIdMap.set(row.name, row.id);
 		}
+
+		const metricsToInsert = parsedSubreddits.map(sub => ({
+			subredditId: nameToIdMap.get(sub.name)!,
+			weeklyVisitors: sub.weeklyVisitors,
+			recordedAt: currentTime,
+		}));
+
+		// 3. Bulk Insert into metricsHistory
+		await db.insert(metricsHistory).values(metricsToInsert);
 
 		await db
 			.update(cronLogs)
