@@ -140,7 +140,13 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 											</linearGradient>
 										</defs>
 										<CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
-										<YAxis hide domain={['dataMin', 'dataMax']} padding={{ top: 20, bottom: 0 }} />
+										<YAxis 
+											hide 
+											domain={[
+												(dataMin: number) => dataMin - (Math.abs(dataMin) * 0.02), 
+												(dataMax: number) => dataMax + (Math.abs(dataMax) * 0.02)
+											]} 
+										/>
 										<XAxis
 											dataKey="date"
 											axisLine={false}

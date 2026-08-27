@@ -33,7 +33,13 @@ export function SubredditSparkline({ data, dataKey, color }: Props) {
 			<ResponsiveContainer width="100%" height="100%">
 				<LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
 					<CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" />
-					<YAxis hide domain={['dataMin', 'dataMax']} padding={{ top: 20, bottom: 0 }} />
+					<YAxis 
+						hide 
+						domain={[
+							(dataMin: number) => dataMin - (Math.abs(dataMin) * 0.02), 
+							(dataMax: number) => dataMax + (Math.abs(dataMax) * 0.02)
+						]} 
+					/>
 					<XAxis dataKey="date" hide />
 					<Tooltip
 						contentStyle={{
