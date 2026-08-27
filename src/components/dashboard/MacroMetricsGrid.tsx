@@ -63,7 +63,7 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 			title: "Top 10 Concentration",
 			key: "top10Concentration",
 			dataKey: "Concentration",
-			value: `${latest.top10Concentration.toFixed(1)}%`,
+			value: `${latest.top10Concentration.toFixed(2)}%`,
 			isPercentage: true,
 			description: "Volume held by the top 10 subs",
 		},
@@ -164,7 +164,7 @@ export function MacroMetricsGrid({ platformHistory }: MacroMetricsGridProps) {
 											}}
 											itemStyle={{ color: "#fff" }}
 											formatter={(value: any) => {
-												if (activeMetric.isPercentage) return [`${Number(value).toFixed(1)}%`, activeMetric.dataKey];
+												if (activeMetric.isPercentage) return [`${Number(value).toFixed(2)}%`, activeMetric.dataKey];
 												const num = Number(value);
 												let formatted = num.toLocaleString();
 												if (num >= 1_000_000_000) formatted = parseFloat((num / 1_000_000_000).toFixed(3)) + 'B';
