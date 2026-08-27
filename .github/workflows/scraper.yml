@@ -2,8 +2,8 @@ name: Reddit Scraper Cron
 
 on:
   schedule:
-    # Run once a day at midnight UTC
-    - cron: '0 0 * * *'
+    # Run at midnight and noon UTC (deduplication logic will skip the noon run if midnight succeeds)
+    - cron: '0 0,12 * * *'
   workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
