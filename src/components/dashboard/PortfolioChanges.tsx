@@ -53,7 +53,7 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 									<div>
 										<p className="text-white font-semibold tracking-wide">r/{sub.name}</p>
 										<p className="text-xs text-zinc-400 mt-0.5 min-h-[16px]">
-											{isMounted ? `Added ${format(new Date(sub.createdAt), "MMM d, yyyy")}` : (
+											{isMounted ? `Added ${format(new Date(sub.addedAt), "MMM d, yyyy")}` : (
 												<span className="inline-block w-24 h-3 bg-white/10 rounded animate-pulse" />
 											)}
 										</p>
@@ -101,12 +101,7 @@ export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
 									<div>
 										<p className="text-zinc-200 font-semibold tracking-wide">r/{sub.name}</p>
 										<p className="text-xs text-zinc-400 mt-0.5 min-h-[16px]">
-											{isMounted ? (() => {
-												const dropDate = sub.droppedAt 
-													? new Date(sub.droppedAt) 
-													: new Date(sub.lastSeenAt);
-												return `Dropped ${format(dropDate, "MMM d, yyyy")}`;
-											})() : (
+											{isMounted ? `Last seen ${format(new Date(sub.lastSeenAt), "MMM d, yyyy")}` : (
 												<span className="inline-block w-24 h-3 bg-white/10 rounded animate-pulse" />
 											)}
 										</p>

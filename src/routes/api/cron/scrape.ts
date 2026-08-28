@@ -247,13 +247,14 @@ export const runScrapeCycle = async () => {
 			.set({ isActive: false, droppedAt: currentTime })
 			.where(eq(subreddits.isActive, true));
 
-		// 2. Upsert the 250 subreddits and mark active (clear droppedAt)
+		// 2. Upsert the 250 subreddits and mark active (clear droppedAt, update addedAt if returning)
 		const subredditsToInsert = parsedSubreddits.map(sub => ({
 			name: sub.name,
 			isActive: true,
 			consecutiveFailures: 0,
 			lastSeenAt: currentTime,
 			droppedAt: null,
+			addedAt: currentTime,
 		}));
 
 		const upsertedSubreddits = await db
@@ -261,7 +262,13 @@ export const runScrapeCycle = async () => {
 			.values(subredditsToInsert)
 			.onConflictDoUpdate({
 				target: subreddits.name,
-				set: { isActive: true, consecutiveFailures: 0, lastSeenAt: currentTime, droppedAt: null }
+				set: { 
+					isActive: true, 
+					consecutiveFailures: 0, 
+					lastSeenAt: currentTime, 
+					droppedAt: null,
+					addedAt: sql`CASE WHEN subreddits.is_active = false THEN ${currentTime} ELSE subreddits.added_at END`
+				}
 			})
 			.returning({ id: subreddits.id, name: subreddits.name });
 

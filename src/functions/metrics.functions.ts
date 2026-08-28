@@ -72,12 +72,13 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 		const genesisDate = new Date(earliestSub[0].createdAt);
 		genesisDate.setHours(genesisDate.getHours() + 1); // 1 hour buffer to ignore initial seed
 
-		// 2. Fetch Recent Additions (isActive = true, createdAt > genesisDate)
+		// 2. Fetch Recent Additions (isActive = true, addedAt > genesisDate)
 		const additions = await db
 			.select({
 				id: subreddits.id,
 				name: subreddits.name,
 				createdAt: subreddits.createdAt,
+				addedAt: subreddits.addedAt,
 				visitors: metricsHistory.weeklyVisitors,
 			})
 			.from(subreddits)
@@ -89,8 +90,8 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 					ORDER BY recorded_at DESC LIMIT 1
 				)`
 			)
-			.where(and(eq(subreddits.isActive, true), gt(subreddits.createdAt, genesisDate)))
-			.orderBy(desc(subreddits.createdAt))
+			.where(and(eq(subreddits.isActive, true), gt(subreddits.addedAt, genesisDate)))
+			.orderBy(desc(subreddits.addedAt))
 			.limit(10);
 
 		// 3. Fetch Recent Drops (isActive = false)

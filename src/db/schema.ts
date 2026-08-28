@@ -23,6 +23,9 @@ export const subreddits = pgTable("subreddits", {
 		.defaultNow()
 		.notNull(),
 	droppedAt: timestamp("dropped_at", { withTimezone: true }),
+	addedAt: timestamp("added_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
 }).enableRLS();
 
 export const subredditsRelations = relations(subreddits, ({ many }) => ({
