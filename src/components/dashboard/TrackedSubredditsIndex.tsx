@@ -11,12 +11,28 @@ interface SubredditIndexProps {
 export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexProps) {
 	const [expandedSub, setExpandedSub] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [sortKey, setSortKey] = useState<"weeklyVisitors" | "growthPercent">("weeklyVisitors");
+	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
 	const sortedData = useMemo(() => {
 		return [...latestData]
 			.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
-			.sort((a, b) => b.weeklyVisitors - a.weeklyVisitors);
-	}, [latestData, searchQuery]);
+			.sort((a, b) => {
+				const valA = a[sortKey] || 0;
+				const valB = b[sortKey] || 0;
+				if (sortOrder === "asc") return valA - valB;
+				return valB - valA;
+			});
+	}, [latestData, searchQuery, sortKey, sortOrder]);
+
+	const toggleSort = (key: "weeklyVisitors" | "growthPercent") => {
+		if (sortKey === key) {
+			setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+		} else {
+			setSortKey(key);
+			setSortOrder("desc");
+		}
+	};
 
 	const toggleRow = (subName: string) => {
 		setExpandedSub(expandedSub === subName ? null : subName);
@@ -63,8 +79,18 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 						<thead>
 							<tr className="text-xs tracking-widest uppercase text-zinc-400 border-b border-white/10">
 								<th className="py-4 px-6 font-medium">Subreddit</th>
-								<th className="py-4 px-6 font-medium text-right">Weekly Visitors</th>
-								<th className="py-4 px-6 font-medium text-right">Net Growth</th>
+								<th 
+									className="py-4 px-6 font-medium text-right cursor-pointer hover:text-white transition-colors select-none"
+									onClick={() => toggleSort("weeklyVisitors")}
+								>
+									Weekly Visitors {sortKey === "weeklyVisitors" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+								</th>
+								<th 
+									className="py-4 px-6 font-medium text-right cursor-pointer hover:text-white transition-colors select-none"
+									onClick={() => toggleSort("growthPercent")}
+								>
+									Net Growth {sortKey === "growthPercent" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+								</th>
 							</tr>
 						</thead>
 						<tbody className="text-sm divide-y divide-white/10">
