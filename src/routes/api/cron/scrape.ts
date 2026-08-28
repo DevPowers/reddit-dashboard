@@ -240,17 +240,20 @@ export const runScrapeCycle = async () => {
 
 		logger.info("Cron", `Successfully parsed ${parsedSubreddits.length} subreddits from explore/most_visited.`);
 
-		// 1. Reset all active subreddits to inactive
-		await db.update(subreddits).set({ isActive: false });
-
 		const currentTime = sql`${getEasternTimeISO()}`;
 
-		// 2. Upsert the 250 subreddits and mark active
+		// 1. Reset all active subreddits to inactive, stamping droppedAt
+		await db.update(subreddits)
+			.set({ isActive: false, droppedAt: currentTime })
+			.where(eq(subreddits.isActive, true));
+
+		// 2. Upsert the 250 subreddits and mark active (clear droppedAt)
 		const subredditsToInsert = parsedSubreddits.map(sub => ({
 			name: sub.name,
 			isActive: true,
 			consecutiveFailures: 0,
 			lastSeenAt: currentTime,
+			droppedAt: null,
 		}));
 
 		const upsertedSubreddits = await db
@@ -258,7 +261,7 @@ export const runScrapeCycle = async () => {
 			.values(subredditsToInsert)
 			.onConflictDoUpdate({
 				target: subreddits.name,
-				set: { isActive: true, consecutiveFailures: 0, lastSeenAt: currentTime }
+				set: { isActive: true, consecutiveFailures: 0, lastSeenAt: currentTime, droppedAt: null }
 			})
 			.returning({ id: subreddits.id, name: subreddits.name });
 

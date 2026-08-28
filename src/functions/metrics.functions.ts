@@ -100,6 +100,7 @@ export const getPortfolioChanges = createServerFn({ method: "GET" }).handler(
 				name: subreddits.name,
 				createdAt: subreddits.createdAt,
 				lastSeenAt: subreddits.lastSeenAt,
+				droppedAt: subreddits.droppedAt,
 				visitors: metricsHistory.weeklyVisitors,
 			})
 			.from(subreddits)
