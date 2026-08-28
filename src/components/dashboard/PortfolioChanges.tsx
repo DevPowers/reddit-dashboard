@@ -1,13 +1,16 @@
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ArrowUpRight, ArrowDownRight, Clock } from "lucide-react";
 
 interface PortfolioChangesProps {
 	additions: any[];
 	drops: any[];
-	latestScrapeDate?: Date | string;
 }
 
-export function PortfolioChanges({ additions, drops, latestScrapeDate }: PortfolioChangesProps) {
+export function PortfolioChanges({ additions, drops }: PortfolioChangesProps) {
+	const [isMounted, setIsMounted] = useState(false);
+	useEffect(() => setIsMounted(true), []);
+
 	if (additions.length === 0 && drops.length === 0) {
 		return null;
 	}
@@ -49,8 +52,10 @@ export function PortfolioChanges({ additions, drops, latestScrapeDate }: Portfol
 									</div>
 									<div>
 										<p className="text-white font-semibold tracking-wide">r/{sub.name}</p>
-										<p className="text-xs text-zinc-400 mt-0.5">
-											Added {format(new Date(sub.createdAt), "MMM d, yyyy")}
+										<p className="text-xs text-zinc-400 mt-0.5 min-h-[16px]">
+											{isMounted ? `Added ${format(new Date(sub.createdAt), "MMM d, yyyy")}` : (
+												<span className="inline-block w-24 h-3 bg-white/10 rounded animate-pulse" />
+											)}
 										</p>
 									</div>
 								</div>
@@ -95,8 +100,15 @@ export function PortfolioChanges({ additions, drops, latestScrapeDate }: Portfol
 									</div>
 									<div>
 										<p className="text-zinc-200 font-semibold tracking-wide">r/{sub.name}</p>
-										<p className="text-xs text-zinc-400 mt-0.5">
-											Dropped {format(new Date(sub.lastSeenAt), "MMM d, yyyy")}
+										<p className="text-xs text-zinc-400 mt-0.5 min-h-[16px]">
+											{isMounted ? (() => {
+												const dropDate = sub.droppedAt 
+													? new Date(sub.droppedAt) 
+													: new Date(sub.lastSeenAt);
+												return `Dropped ${format(dropDate, "MMM d, yyyy")}`;
+											})() : (
+												<span className="inline-block w-24 h-3 bg-white/10 rounded animate-pulse" />
+											)}
 										</p>
 									</div>
 								</div>
