@@ -242,12 +242,7 @@ export const runScrapeCycle = async () => {
 
 		const currentTime = sql`${getEasternTimeISO()}`;
 
-		// 1. Reset all active subreddits to inactive, stamping droppedAt
-		await db.update(subreddits)
-			.set({ isActive: false, droppedAt: currentTime })
-			.where(eq(subreddits.isActive, true));
-
-		// 2. Upsert the 250 subreddits and mark active (clear droppedAt, update addedAt if returning)
+		// 1. Upsert the 250 subreddits and mark active (clear droppedAt, update addedAt if returning)
 		const subredditsToInsert = parsedSubreddits.map(sub => ({
 			name: sub.name,
 			isActive: true,
@@ -271,6 +266,12 @@ export const runScrapeCycle = async () => {
 				}
 			})
 			.returning({ id: subreddits.id, name: subreddits.name });
+
+		// 2. Mark subreddits as dropped if they were active but are missing from this scrape
+		const parsedNames = parsedSubreddits.map(sub => sub.name);
+		await db.update(subreddits)
+			.set({ isActive: false, droppedAt: currentTime })
+			.where(and(eq(subreddits.isActive, true), notInArray(subreddits.name, parsedNames)));
 
 		// Map returned IDs to their weekly visitors
 		const nameToIdMap = new Map<string, number>();
