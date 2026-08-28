@@ -8,6 +8,7 @@ import {
 	varchar,
 	boolean,
 	index,
+	text,
 } from "drizzle-orm/pg-core";
 
 export const subreddits = pgTable("subreddits", {
@@ -86,3 +87,13 @@ export const platformHistoricalMetrics = pgTable("platform_historical_metrics", 
 	averageVisitors: integer("average_visitors").notNull().default(0),
 	top10Concentration: real("top_10_concentration").notNull().default(0),
 }).enableRLS();
+
+export const rawScraperResponses = pgTable("raw_scraper_responses", {
+	id: serial("id").primaryKey(),
+	htmlContent: text("html_content").notNull(),
+	urlScraped: varchar("url_scraped", { length: 500 }).notNull(),
+	scrapedAt: timestamp("scraped_at", { withTimezone: true })
+		.defaultNow()
+		.notNull(),
+}).enableRLS();
+

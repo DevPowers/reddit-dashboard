@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as cheerio from "cheerio";
-import { eq, asc, sql, and, lt, gte } from "drizzle-orm";
+import { eq, asc, desc, sql, and, lt, gte, notInArray } from "drizzle-orm";
 import { db } from "../../../db/index.server";
 import {
 	cronLogs,
 	metricsHistory,
 	subreddits,
 	scraperKeys,
+	rawScraperResponses,
 } from "../../../db/schema";
 import { logger } from "../../../lib/logger";
 import { calculateAndSaveMacroMetrics } from "../../../functions/macro";
@@ -49,9 +50,9 @@ export const runScrapeCycle = async () => {
 		return new Response(JSON.stringify({ error: "Scrape job already running" }), { status: 409 });
 	}
 
-	// 1-Run-Per-Day Limit (Deduplication)
-	const todayStart = new Date();
-	todayStart.setUTCHours(0, 0, 0, 0);
+	// 1-Run-Per-Day Limit (Deduplication) based on Eastern Time
+	const currentIso = getEasternTimeISO();
+	const todayStart = new Date(currentIso.split("T")[0] + "T00:00:00" + currentIso.slice(-6));
 
 	const successfulJobsToday = await db
 		.select()
@@ -185,6 +186,32 @@ export const runScrapeCycle = async () => {
 
 		await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
 		const html = await response.text();
+		
+		try {
+			await db.insert(rawScraperResponses).values({
+				htmlContent: html,
+				urlScraped: targetUrl,
+			});
+			// Keep 5 most recent, archive 1-in-4 historical
+			const top5 = await db.select({ id: rawScraperResponses.id })
+				.from(rawScraperResponses)
+				.orderBy(desc(rawScraperResponses.scrapedAt))
+				.limit(5);
+
+			if (top5.length === 5) {
+				const top5Ids = top5.map(r => r.id);
+				await db.delete(rawScraperResponses)
+					.where(
+						and(
+							notInArray(rawScraperResponses.id, top5Ids),
+							sql`FLOOR(EXTRACT(EPOCH FROM ${rawScraperResponses.scrapedAt}) / 86400)::int % 4 != 0`
+						)
+					);
+			}
+		} catch (saveErr) {
+			logger.warn("Cron", "Failed to save raw html response for debugging");
+		}
+
 		const $ = cheerio.load(html);
 
 		const parsedSubreddits: { name: string, weeklyVisitors: number }[] = [];

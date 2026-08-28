@@ -9,36 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SubredditsRouteImport } from './routes/subreddits'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RSubredditRouteImport } from './routes/r.$subreddit'
-import { Route as ApiTestEnvRouteImport } from './routes/api/test-env'
-import { Route as ApiRedditSubredditRouteImport } from './routes/api/reddit.$subreddit'
 import { Route as ApiCronScrapeRouteImport } from './routes/api/cron/scrape'
 
-const SubredditsRoute = SubredditsRouteImport.update({
-  id: '/subreddits',
-  path: '/subreddits',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RSubredditRoute = RSubredditRouteImport.update({
-  id: '/r/$subreddit',
-  path: '/r/$subreddit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTestEnvRoute = ApiTestEnvRouteImport.update({
-  id: '/api/test-env',
-  path: '/api/test-env',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiRedditSubredditRoute = ApiRedditSubredditRouteImport.update({
-  id: '/api/reddit/$subreddit',
-  path: '/api/reddit/$subreddit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCronScrapeRoute = ApiCronScrapeRouteImport.update({
@@ -49,100 +25,37 @@ const ApiCronScrapeRoute = ApiCronScrapeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/subreddits': typeof SubredditsRoute
-  '/api/test-env': typeof ApiTestEnvRoute
-  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
-  '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/subreddits': typeof SubredditsRoute
-  '/api/test-env': typeof ApiTestEnvRoute
-  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
-  '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/subreddits': typeof SubredditsRoute
-  '/api/test-env': typeof ApiTestEnvRoute
-  '/r/$subreddit': typeof RSubredditRoute
   '/api/cron/scrape': typeof ApiCronScrapeRoute
-  '/api/reddit/$subreddit': typeof ApiRedditSubredditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/subreddits'
-    | '/api/test-env'
-    | '/r/$subreddit'
-    | '/api/cron/scrape'
-    | '/api/reddit/$subreddit'
+  fullPaths: '/' | '/api/cron/scrape'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/subreddits'
-    | '/api/test-env'
-    | '/r/$subreddit'
-    | '/api/cron/scrape'
-    | '/api/reddit/$subreddit'
-  id:
-    | '__root__'
-    | '/'
-    | '/subreddits'
-    | '/api/test-env'
-    | '/r/$subreddit'
-    | '/api/cron/scrape'
-    | '/api/reddit/$subreddit'
+  to: '/' | '/api/cron/scrape'
+  id: '__root__' | '/' | '/api/cron/scrape'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SubredditsRoute: typeof SubredditsRoute
-  ApiTestEnvRoute: typeof ApiTestEnvRoute
-  RSubredditRoute: typeof RSubredditRoute
   ApiCronScrapeRoute: typeof ApiCronScrapeRoute
-  ApiRedditSubredditRoute: typeof ApiRedditSubredditRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/subreddits': {
-      id: '/subreddits'
-      path: '/subreddits'
-      fullPath: '/subreddits'
-      preLoaderRoute: typeof SubredditsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/r/$subreddit': {
-      id: '/r/$subreddit'
-      path: '/r/$subreddit'
-      fullPath: '/r/$subreddit'
-      preLoaderRoute: typeof RSubredditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/test-env': {
-      id: '/api/test-env'
-      path: '/api/test-env'
-      fullPath: '/api/test-env'
-      preLoaderRoute: typeof ApiTestEnvRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/reddit/$subreddit': {
-      id: '/api/reddit/$subreddit'
-      path: '/api/reddit/$subreddit'
-      fullPath: '/api/reddit/$subreddit'
-      preLoaderRoute: typeof ApiRedditSubredditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/scrape': {
@@ -157,11 +70,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SubredditsRoute: SubredditsRoute,
-  ApiTestEnvRoute: ApiTestEnvRoute,
-  RSubredditRoute: RSubredditRoute,
   ApiCronScrapeRoute: ApiCronScrapeRoute,
-  ApiRedditSubredditRoute: ApiRedditSubredditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
