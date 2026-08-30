@@ -12,23 +12,26 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 interface AggregateTrendCardProps {
 	totalVisitors: number;
 	growthPercent: number;
+	netNewVisitors: number;
 	chartData: any[];
 }
 
-export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: AggregateTrendCardProps) {
+export function AggregateTrendCard({ totalVisitors, growthPercent, netNewVisitors, chartData }: AggregateTrendCardProps) {
 	const isPositive = growthPercent >= 0;
 	
 	const formatNumber = (num: number) => {
-		if (num >= 1_000_000_000) {
-			return (num / 1_000_000_000).toFixed(1) + 'B';
+		const absNum = Math.abs(num);
+		const sign = num < 0 ? '-' : '';
+		if (absNum >= 1_000_000_000) {
+			return sign + (absNum / 1_000_000_000).toFixed(1) + 'B';
 		}
-		if (num >= 1_000_000) {
-			return (num / 1_000_000).toFixed(1) + 'M';
+		if (absNum >= 1_000_000) {
+			return sign + (absNum / 1_000_000).toFixed(1) + 'M';
 		}
-		if (num >= 1_000) {
-			return (num / 1_000).toFixed(1) + 'K';
+		if (absNum >= 1_000) {
+			return sign + (absNum / 1_000).toFixed(1) + 'K';
 		}
-		return num.toString();
+		return sign + absNum.toString();
 	};
 
 	return (
@@ -44,11 +47,19 @@ export function AggregateTrendCard({ totalVisitors, growthPercent, chartData }: 
 					<span className="text-5xl font-black text-white tracking-tighter">
 						{formatNumber(totalVisitors)}
 					</span>
-					<div className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-sm font-bold ${
-						isPositive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
-					}`}>
-						{isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-						<span>{isPositive ? "+" : ""}{growthPercent.toFixed(2)}%</span>
+					<div className="flex flex-col space-y-2">
+						<div className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-sm font-bold ${
+							isPositive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+						}`}>
+							{isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+							<span>{isPositive ? "+" : ""}{growthPercent.toFixed(2)}%</span>
+						</div>
+						<div className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-sm font-bold ${
+							isPositive ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+						}`}>
+							{isPositive ? <TrendingUp className="w-4 h-4 opacity-0" /> : <TrendingDown className="w-4 h-4 opacity-0" />}
+							<span>{isPositive && netNewVisitors > 0 ? "+" : ""}{formatNumber(netNewVisitors)}</span>
+						</div>
 					</div>
 				</div>
 			</div>

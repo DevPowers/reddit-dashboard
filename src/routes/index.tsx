@@ -69,10 +69,11 @@ function Dashboard() {
 
 	const macroMetrics = useMemo(() => {
 		const latest = platformHistory[platformHistory.length - 1];
-		if (!latest) return { visitorGrowthPercent: 0, totalWeeklyVisitors: 0 };
+		if (!latest) return { visitorGrowthPercent: 0, totalWeeklyVisitors: 0, netNewWeeklyVisitors: 0 };
 		return {
 			visitorGrowthPercent: latest.visitorGrowthPercent,
 			totalWeeklyVisitors: latest.totalWeeklyVisitors,
+			netNewWeeklyVisitors: latest.netNewWeeklyVisitors,
 		};
 	}, [platformHistory]);
 
@@ -101,6 +102,7 @@ function Dashboard() {
 					<AggregateTrendCard 
 						totalVisitors={macroMetrics.totalWeeklyVisitors}
 						growthPercent={macroMetrics.visitorGrowthPercent}
+						netNewVisitors={macroMetrics.netNewWeeklyVisitors}
 						chartData={chartData}
 					/>
 				</div>
