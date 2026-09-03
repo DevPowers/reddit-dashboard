@@ -2,8 +2,10 @@ name: Reddit Scraper Cron
 
 on:
   schedule:
-    # Run at 13:00 and 22:00 UTC (~9am and 6pm Eastern)
-    - cron: '0 13,22 * * *'
+    # Run at 12:17, 16:17, 20:17, and 23:17 UTC (~8am, 12pm, 4pm, 7pm Eastern)
+    # Off-hour minutes (17) avoid GitHub's massive backlog at the top of the hour.
+    # We run 4 times a day to guarantee at least one successful trigger. The internal app logic deduplicates automatically!
+    - cron: '17 12,16,20,23 * * *'
   workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
