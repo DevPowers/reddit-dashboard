@@ -140,15 +140,13 @@ export const runScrapeCycle = async () => {
 				const availableKeys = allKeys.filter(k => !exhaustedKeyIds.has(k.id));
 
 				if (availableKeys.length === 0) {
-					const errMsg = "Data keys exhausted.";
+					const errMsg = "All ScraperAPI keys have been exhausted or blocked.";
 					logger.error("Cron", errMsg);
-
 					await db.update(cronLogs).set({
 						status: "failed",
 						errorMessage: errMsg,
 						durationMs: Date.now() - startTime,
 					}).where(eq(cronLogs.id, log.id));
-
 					return { message: "Scraping cycle aborted: " + errMsg, results: [] };
 				}
 
@@ -169,8 +167,18 @@ export const runScrapeCycle = async () => {
 				attemptNum++;
 				continue;
 			}
+			
+			if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 408) {
+				if (attemptNum < 4) {
+					logger.warn("Cron", `Transient proxy error (Status ${response.status}). Retrying request...`);
+					attemptNum++;
+					// Wait 2 seconds before retrying
+					await new Promise(resolve => setTimeout(resolve, 2000));
+					continue;
+				}
+			}
 
-			// Non-auth error
+			// Unrecoverable or max retries reached
 			break;
 		}
 
