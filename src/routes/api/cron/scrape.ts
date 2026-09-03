@@ -169,7 +169,7 @@ export const runScrapeCycle = async () => {
 			}
 			
 			if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 408) {
-				if (attemptNum < 4) {
+				if (attemptNum < 2) {
 					logger.warn("Cron", `Transient proxy error (Status ${response.status}). Retrying request...`);
 					attemptNum++;
 					// Wait 2 seconds before retrying
