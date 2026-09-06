@@ -118,6 +118,8 @@ export const runScrapeCycle = async () => {
 
 		let response;
 		let attemptNum = 1;
+		let html = "";
+		let parsedSubreddits: { name: string, weeklyVisitors: number }[] = [];
 		const targetUrl = "https://www.reddit.com/explore/most_visited/";
 		
 		while (true) {
@@ -128,11 +130,59 @@ export const runScrapeCycle = async () => {
 			await db.update(scraperKeys).set({ lastAttemptAt: new Date() }).where(eq(scraperKeys.id, currentKeyRowId));
 			response = await fetchWithTimeout(scraperUrl, 60000);
 
-			if (response.ok) break;
-
-			logger.warn("Cron", `[Attempt ${attemptNum}] Failed to scrape. Reason: Status Code ${response.status} (${response.statusText || 'Unknown Error'})`);
+			let rotateKey = false;
+			let fatalError = false;
 
 			if (response.status === 429 || response.status === 403) {
+				logger.warn("Cron", `[Attempt ${attemptNum}] ScraperAPI returned ${response.status} (Authentication/Rate Limit). Rotating key...`);
+				rotateKey = true;
+			} else if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 408) {
+				if (attemptNum < 2) {
+					logger.warn("Cron", `Transient proxy error (Status ${response.status}). Retrying request on same key...`);
+					attemptNum++;
+					await new Promise(resolve => setTimeout(resolve, 2000));
+					continue;
+				} else {
+					logger.warn("Cron", `[Attempt ${attemptNum}] Persistent ${response.status} error from proxy. Rotating key...`);
+					rotateKey = true;
+				}
+			} else if (response.ok) {
+				html = await response.text();
+				const $ = cheerio.load(html);
+				parsedSubreddits = [];
+				
+				$('.flex.flex-col.flex-1.px-xs').each((_, el) => {
+					const name = $(el).find('h4').text().trim();
+					const visitorsStr = $(el).find('faceplate-number').attr('number');
+					
+					if (name && visitorsStr) {
+						const weeklyVisitors = parseInt(visitorsStr, 10);
+						if (!isNaN(weeklyVisitors)) {
+							parsedSubreddits.push({ name, weeklyVisitors });
+						}
+					}
+				});
+
+				if (parsedSubreddits.length === 0) {
+					logger.warn("Cron", `[Attempt ${attemptNum}] Scraper returned 200 but DOM parse failed (Likely ReCAPTCHA block). Rotating key...`);
+					rotateKey = true;
+					
+					try {
+						await db.insert(rawScraperResponses).values({
+							htmlContent: html,
+							urlScraped: targetUrl,
+						});
+					} catch (e) {}
+				} else {
+					// Success!
+					break;
+				}
+			} else {
+				// Unrecoverable status
+				fatalError = true;
+			}
+
+			if (rotateKey) {
 				exhaustedKeyIds.add(currentKeyRowId);
 				await db.update(scraperKeys).set({ lastErrorAt: new Date(), lastStatus: "failed" }).where(eq(scraperKeys.id, currentKeyRowId));
 
@@ -140,7 +190,7 @@ export const runScrapeCycle = async () => {
 				const availableKeys = allKeys.filter(k => !exhaustedKeyIds.has(k.id));
 
 				if (availableKeys.length === 0) {
-					const errMsg = "All ScraperAPI keys have been exhausted or blocked.";
+					const errMsg = "All ScraperAPI keys have been exhausted or blocked by Reddit ReCAPTCHA.";
 					logger.error("Cron", errMsg);
 					await db.update(cronLogs).set({
 						status: "failed",
@@ -164,26 +214,17 @@ export const runScrapeCycle = async () => {
 				activeKeyRow = fallbackKeyRow;
 				currentKeyRowId = fallbackKeyRow.id;
 				currentKeyString = envKeys[fallbackKeyRow.keyIndex - 1];
-				attemptNum++;
+				attemptNum = 1; // Reset attempt counter for new key
 				continue;
 			}
-			
-			if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 408) {
-				if (attemptNum < 2) {
-					logger.warn("Cron", `Transient proxy error (Status ${response.status}). Retrying request...`);
-					attemptNum++;
-					// Wait 2 seconds before retrying
-					await new Promise(resolve => setTimeout(resolve, 2000));
-					continue;
-				}
-			}
 
-			// Unrecoverable or max retries reached
-			break;
+			if (fatalError) {
+				break;
+			}
 		}
 
-		if (!response.ok) {
-			const msg = `Failed to fetch from proxy. Status: ${response.status}`;
+		if (parsedSubreddits.length === 0) {
+			const msg = `Failed to fetch from proxy or parse DOM. Final Status: ${response.status}`;
 			await db.update(cronLogs).set({
 				status: "failed",
 				errorMessage: msg,
@@ -193,7 +234,6 @@ export const runScrapeCycle = async () => {
 		}
 
 		await db.update(scraperKeys).set({ lastStatus: "success" }).where(eq(scraperKeys.id, currentKeyRowId));
-		const html = await response.text();
 		
 		try {
 			await db.insert(rawScraperResponses).values({
@@ -218,32 +258,6 @@ export const runScrapeCycle = async () => {
 			}
 		} catch (saveErr) {
 			logger.warn("Cron", "Failed to save raw html response for debugging");
-		}
-
-		const $ = cheerio.load(html);
-
-		const parsedSubreddits: { name: string, weeklyVisitors: number }[] = [];
-		
-		$('.flex.flex-col.flex-1.px-xs').each((_, el) => {
-			const name = $(el).find('h4').text().trim();
-			const visitorsStr = $(el).find('faceplate-number').attr('number');
-			
-			if (name && visitorsStr) {
-				const weeklyVisitors = parseInt(visitorsStr, 10);
-				if (!isNaN(weeklyVisitors)) {
-					parsedSubreddits.push({ name, weeklyVisitors });
-				}
-			}
-		});
-
-		if (parsedSubreddits.length === 0) {
-			const msg = "DOM parse failed or zero subreddits found.";
-			await db.update(cronLogs).set({
-				status: "failed",
-				errorMessage: msg,
-				durationMs: Date.now() - startTime,
-			}).where(eq(cronLogs.id, log.id));
-			return { message: msg, results: [] };
 		}
 
 		logger.info("Cron", `Successfully parsed ${parsedSubreddits.length} subreddits from explore/most_visited.`);
