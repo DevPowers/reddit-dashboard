@@ -11,7 +11,7 @@ interface SubredditIndexProps {
 export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexProps) {
 	const [expandedSub, setExpandedSub] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [sortKey, setSortKey] = useState<"weeklyVisitors" | "growthPercent">("weeklyVisitors");
+	const [sortKey, setSortKey] = useState<"weeklyVisitors" | "growthPercent" | "absoluteGrowth">("weeklyVisitors");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
 	const sortedData = useMemo(() => {
@@ -25,7 +25,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 			});
 	}, [latestData, searchQuery, sortKey, sortOrder]);
 
-	const toggleSort = (key: "weeklyVisitors" | "growthPercent") => {
+	const toggleSort = (key: "weeklyVisitors" | "growthPercent" | "absoluteGrowth") => {
 		if (sortKey === key) {
 			setSortOrder(sortOrder === "asc" ? "desc" : "asc");
 		} else {
@@ -87,6 +87,12 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 								</th>
 								<th 
 									className="py-4 px-6 font-medium text-right cursor-pointer hover:text-white transition-colors select-none"
+									onClick={() => toggleSort("absoluteGrowth")}
+								>
+									Growth Amount {sortKey === "absoluteGrowth" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
+								</th>
+								<th 
+									className="py-4 px-6 font-medium text-right cursor-pointer hover:text-white transition-colors select-none"
 									onClick={() => toggleSort("growthPercent")}
 								>
 									Net Growth {sortKey === "growthPercent" ? (sortOrder === "asc" ? "↑" : "↓") : ""}
@@ -122,12 +128,15 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 												{formatNumber(sub.weeklyVisitors)}
 											</td>
 											<td className={`py-4 px-6 text-right font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+												{isPositive ? '+' : ''}{formatNumber(Math.abs(sub.absoluteGrowth || 0))}
+											</td>
+											<td className={`py-4 px-6 text-right font-medium ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
 												{isPositive ? '+' : ''}{sub.growthPercent?.toFixed(2)}%
 											</td>
 										</tr>
 										{isExpanded && (
 											<tr className="bg-[#121618] border-t-0 shadow-inner">
-												<td colSpan={3} className="py-6 px-6">
+												<td colSpan={4} className="py-6 px-6">
 													<div className="max-w-4xl mx-auto">
 														<div className="flex justify-between items-end mb-4">
 															<div>
@@ -179,7 +188,7 @@ export function TrackedSubredditsIndex({ latestData, allData }: SubredditIndexPr
 							})}
 							{sortedData.length === 0 && (
 								<tr>
-									<td colSpan={3} className="py-12 text-center text-text-muted">
+									<td colSpan={4} className="py-12 text-center text-text-muted">
 										No subreddits found matching "{searchQuery}".
 									</td>
 								</tr>

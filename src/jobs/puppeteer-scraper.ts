@@ -1,7 +1,7 @@
 import { logger } from "../lib/logger";
 import { db } from "../db/index.server";
 import { subreddits, metricsHistory, cronLogs, rawScraperResponses } from "../db/schema";
-import { eq, desc, and, notInArray, sql } from "drizzle-orm";
+import { eq, and, notInArray, sql } from "drizzle-orm";
 import * as cheerio from "cheerio";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
@@ -82,7 +82,7 @@ export async function runPuppeteerScrapeCycle() {
 	try {
 		logger.info("Cron", "Launching headless browser...");
 		const browser = await puppeteer.launch({
-			headless: "new",
+			headless: true,
 			args: ['--no-sandbox', '--disable-setuid-sandbox']
 		});
 		

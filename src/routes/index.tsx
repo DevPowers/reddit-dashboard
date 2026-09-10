@@ -58,10 +58,12 @@ function Dashboard() {
 		const latestList = Array.from(latestMap.values()).map((latest) => {
 			const hist = earliestMap.get(latest.subredditId);
 			let growth = 0;
+			let absoluteGrowth = 0;
 			if (hist && hist.weeklyVisitors > 0) {
 				growth = ((latest.weeklyVisitors - hist.weeklyVisitors) / hist.weeklyVisitors) * 100;
+				absoluteGrowth = latest.weeklyVisitors - hist.weeklyVisitors;
 			}
-			return { ...latest, growthPercent: growth };
+			return { ...latest, growthPercent: growth, absoluteGrowth };
 		});
 
 		return { latestData: latestList };
