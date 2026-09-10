@@ -12,6 +12,48 @@ puppeteer.use(StealthPlugin());
 
 export async function runPuppeteerScrapeCycle() {
 	const startTime = Date.now();
+
+	// Self-Healing
+	const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+	await db
+		.update(cronLogs)
+		.set({ status: "failed", errorMessage: "Process abruptly killed/timeout", durationMs: 0 })
+		.where(
+			and(
+				eq(cronLogs.status, "running"),
+				sql`${cronLogs.ranAt} < ${twoHoursAgo.toISOString()}` // Simplified for Date comp
+			)
+		);
+
+	const runningJobs = await db
+		.select()
+		.from(cronLogs)
+		.where(eq(cronLogs.status, "running"));
+
+	if (runningJobs.length > 0) {
+		logger.warn("Cron", "A scrape job is already running. Aborting concurrent execution.");
+		return { message: "Scrape job already running", results: [] };
+	}
+
+	// 1-Run-Per-Day Limit (Deduplication) based on Eastern Time
+	const currentIso = getEasternTimeISO();
+	const todayStart = new Date(currentIso.split("T")[0] + "T00:00:00" + currentIso.slice(-6));
+
+	const successfulJobsToday = await db
+		.select()
+		.from(cronLogs)
+		.where(
+			and(
+				eq(cronLogs.status, "success"),
+				sql`${cronLogs.ranAt} >= ${todayStart.toISOString()}`
+			)
+		);
+
+	if (successfulJobsToday.length > 0) {
+		logger.info("Cron", "A successful scrape was already completed today. Aborting to prevent duplicate scrapes.");
+		return { message: "Already scraped today successfully.", results: [] };
+	}
+
 	logger.info("Cron", "Starting Puppeteer stealth scrape cycle for explore/most_visited...");
 
 	// 1. Create a "running" log entry
@@ -21,6 +63,7 @@ export async function runPuppeteerScrapeCycle() {
 			status: "running",
 			errorMessage: null,
 			durationMs: 0,
+			ranAt: sql`${getEasternTimeISO()}`,
 		})
 		.returning({ id: cronLogs.id });
 
