@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config();
 
-import { runScrapeCycle } from "../routes/api/cron/scrape";
+import { runPuppeteerScrapeCycle } from "./puppeteer-scraper";
 import { logger } from "../lib/logger";
 import { db } from "../db/index.server";
 import { cronLogs } from "../db/schema";
@@ -32,7 +32,7 @@ process.on('SIGTERM', () => handleShutdown('SIGTERM'));
 async function run() {
 	logger.info("CLI", "Starting manual/CLI scrape cycle execution...");
 	try {
-		const result = await runScrapeCycle();
+		const result = await runPuppeteerScrapeCycle();
 		logger.info("CLI", "Scrape cycle completed successfully.", result);
 		process.exit(0);
 	} catch (e) {

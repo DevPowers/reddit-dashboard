@@ -30,9 +30,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install Puppeteer Chrome
+        run: npx puppeteer browsers install chrome
+
       - name: Run Scraper
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDDIT_SESSION_KEY: ${{ secrets.REDDIT_SESSION_KEY }}
           SCRAPER_API_KEY_1: ${{ secrets.SCRAPER_API_KEY_1 }}
           SCRAPER_API_KEY_2: ${{ secrets.SCRAPER_API_KEY_2 }}
           SCRAPER_API_KEY_3: ${{ secrets.SCRAPER_API_KEY_3 }}
