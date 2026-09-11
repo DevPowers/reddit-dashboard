@@ -33,10 +33,14 @@ async function run() {
 	logger.info("CLI", "Starting manual/CLI scrape cycle execution...");
 	try {
 		const result = await runPuppeteerScrapeCycle();
+		if (result.message.includes("missing") || result.message.includes("failed") || result.message.includes("aborted")) {
+			logger.error("CLI", "Scrape cycle failed:", result);
+			process.exit(1);
+		}
 		logger.info("CLI", "Scrape cycle completed successfully.", result);
 		process.exit(0);
 	} catch (e) {
-		logger.error("CLI", "Scrape cycle failed with error:", e);
+		logger.error("CLI", "Scrape cycle crashed with error:", e);
 		process.exit(1);
 	}
 }
